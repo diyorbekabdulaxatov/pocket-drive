@@ -64,6 +64,149 @@ func check_wheel_geometry(car: DriveCar) -> void:
 		check(absf(left.z - right.z) < 0.01, axle + " axle hubs align in Z")
 		check(left.x < 0 and right.x > 0 and absf(left.x + right.x) < 0.01, axle + " axle hubs mirror in X")
 
+# Material 3 minimums: 48 dp touch targets, 14 sp button text, 12 sp labels.
+# On a landscape phone the 720-unit-tall layout has about two units per dp.
+func check_material_sizes(hud, dimensions: Vector2i) -> void:
+	var small_targets: Array[String] = []
+	var small_text: Array[String] = []
+	for node in hud.root.find_children("*", "", true, false):
+		if not (node is Control and node.is_visible_in_tree()): continue
+		if node is Button:
+			if node.size.y < 96: small_targets.append(node.text)
+			if node.get_theme_font_size("font_size") < 28: small_text.append(node.text)
+		elif node is Label and node.get_theme_font_size("font_size") < 24:
+			small_text.append(node.text)
+	for id in hud.pads:
+		if hud.pads[id].size.y < 96 or hud.pads[id].size.x < 96: small_targets.append(id)
+	for id in hud.icons:
+		if hud.icons[id].size.x < 96 or hud.icons[id].size.y < 96: small_targets.append("icon " + id)
+	for i in 4:
+		var segment: Rect2 = hud.shifter.segment_rect(i)
+		if segment.size.x < 96 or segment.size.y < 96: small_targets.append("gear " + hud.shifter.GEARS[i])
+	check(small_targets.is_empty(), "Touch targets are at least 48 dp at %s %s" % [dimensions, small_targets])
+	check(small_text.is_empty(), "Text meets Material minimum sizes at %s %s" % [dimensions, small_text])
+
+func check_gears(world, car: DriveCar, hud) -> void:
+	var stop_z: float = car.position.z
+	car.shift("N")
+	car.throttle = 1
+	await ticks(60)
+	check(car.speed == 0 and world.audio.rpm > 2500, "N revs the engine without moving (%d rpm)" % world.audio.rpm)
+	car.throttle = 0
+	var touch := InputEventScreenTouch.new()
+	touch.index = 3
+	touch.pressed = true
+	touch.position = hud.shifter.global_position + hud.shifter.segment_rect(1).get_center()
+	hud._input(touch)
+	check(car.gear == "R" and hud.shifter.selected == "R" and hud.fingers.get(3) == "lever", "Tapping R on the gear lever shifts into reverse")
+	hud.release(3)
+	car.throttle = 1
+	await ticks(120)
+	check(car.speed < -3 and car.position.z > stop_z + 2, "GAS in R drives backwards (%.1f m/s)" % car.speed)
+	hud.request_shift("D")
+	check(car.gear == "R" and hud.status_label.text == "Stop the car to shift into D", "Shifting into D while reversing is refused with a message")
+	car.throttle = 0
+	car.brake = 1
+	await ticks(90)
+	car.brake = 0
+	check(car.speed == 0 and car.shift("D"), "After stopping, D can be selected")
+
+func touch(hud, index: int, at: Vector2, pressed := true) -> void:
+	var event := InputEventScreenTouch.new()
+	event.index = index
+	event.pressed = pressed
+	event.position = at
+	hud._input(event)
+
+func centre(control: Control) -> Vector2:
+	return control.get_global_rect().get_center()
+
+func check_controls(world, car: DriveCar, hud) -> void:
+	hud.clear_inputs()
+	# A thumb on GAS must not stop another finger pressing buttons.
+	touch(hud, 0, centre(hud.pads.gas))
+	touch(hud, 1, centre(hud.icons.headlights))
+	touch(hud, 1, centre(hud.icons.headlights), false)
+	hud._process(0.016)
+	check(car.headlights_on and car.headlamps.all(func(l): return l.visible) and car.throttle == 1, "Headlights switch on while another finger holds GAS")
+	touch(hud, 0, centre(hud.pads.gas), false)
+	touch(hud, 1, centre(hud.icons.headlights))
+	touch(hud, 1, centre(hud.icons.headlights), false)
+	check(not car.headlights_on, "Headlights switch off again")
+	touch(hud, 2, centre(hud.icons.hazard))
+	touch(hud, 2, centre(hud.icons.hazard), false)
+	# process_frame fires before nodes run _process, so wait for the car's blink update.
+	await ticks(2)
+	var lit := car.indicator_lamps.filter(func(l): return l.visible).size()
+	check(car.indicator == "hazard" and car.indicator_lamps.size() == 4 and lit == 4, "Hazard lights blink all four lamps (%d lit)" % lit)
+	touch(hud, 2, centre(hud.icons.signal_left))
+	touch(hud, 2, centre(hud.icons.signal_left), false)
+	await ticks(2)
+	lit = car.indicator_lamps.filter(func(l): return l.visible).size()
+	check(car.indicator == "left" and lit == 2, "Left signal blinks the two left lamps (%d lit)" % lit)
+	touch(hud, 2, centre(hud.icons.signal_left))
+	touch(hud, 2, centre(hud.icons.signal_left), false)
+	check(car.indicator == "", "Tapping the signal again cancels it")
+	# Steering must never touch the indicators, and signal buttons must never steer.
+	touch(hud, 2, centre(hud.pads.left))
+	touch(hud, 3, centre(hud.pads.right))
+	hud._process(0.016)
+	check(car.indicator == "" and car.steering == 0, "Steering arrows do not switch on turn signals")
+	touch(hud, 2, centre(hud.pads.left), false)
+	touch(hud, 3, centre(hud.pads.right), false)
+	touch(hud, 2, centre(hud.icons.signal_right))
+	hud._process(0.016)
+	check(car.indicator == "right" and car.steering == 0, "Holding a signal button does not steer")
+	touch(hud, 2, centre(hud.icons.signal_right), false)
+	touch(hud, 2, centre(hud.icons.signal_right))
+	touch(hud, 2, centre(hud.icons.signal_right), false)
+	touch(hud, 3, centre(hud.icons.horn))
+	hud._process(0.016)
+	await ticks(2)
+	check(car.horn and world.audio.horn.playing, "Holding the horn sounds it")
+	touch(hud, 3, centre(hud.icons.horn), false)
+	hud._process(0.016)
+	await ticks(2)
+	check(not car.horn and not world.audio.horn.playing, "Releasing the horn silences it")
+	touch(hud, 4, centre(hud.icons.mode))
+	touch(hud, 4, centre(hud.icons.mode), false)
+	check(not car.sport and hud.icons.mode.text == "CITY", "Mode button switches to CITY")
+	touch(hud, 4, centre(hud.icons.mode))
+	touch(hud, 4, centre(hud.icons.mode), false)
+	check(car.sport and hud.icons.mode.text == "SPORT", "Mode button switches back to SPORT")
+	var mode_before: int = world.camera_mode
+	touch(hud, 5, centre(hud.icons.camera))
+	touch(hud, 5, centre(hud.icons.camera), false)
+	check(world.camera_mode == (mode_before + 1) % world.CAMERA_MODES.size(), "Camera button changes the view")
+	while world.CAMERA_MODES[world.camera_mode] != "Chase": world.cycle_camera()
+	# Drag the lever handle from P down to D in one gesture.
+	car.reset_car()
+	car.shift("P")
+	touch(hud, 6, hud.shifter.global_position + hud.shifter.segment_rect(0).get_center())
+	var slide := InputEventScreenDrag.new()
+	slide.index = 6
+	slide.position = hud.shifter.global_position + hud.shifter.segment_rect(3).get_center() + Vector2(60, 0)
+	hud._input(slide)
+	touch(hud, 6, slide.position, false)
+	check(car.gear == "D", "Dragging the lever from P to D selects D")
+	car.position += Vector3(0, 0, -20)
+	touch(hud, 7, centre(hud.icons.reset))
+	touch(hud, 7, centre(hud.icons.reset), false)
+	check(Vector2(car.position.x - car.spawn.x, car.position.z - car.spawn.z).length() < 0.01, "Reset button returns the car to the start")
+	touch(hud, 8, centre(hud.icons.pause))
+	check(hud.paused and paused, "Pause button pauses the game")
+	hud.set_paused(false)
+	hud.clear_inputs()
+
+# Measured on a Galaxy S24: 120 fps with four shadow cascades kept the GPU 77-86%
+# busy and heated the phone; these limits cut GPU work by about half.
+func check_phone_budget(world) -> void:
+	check(ProjectSettings.get_setting("application/run/max_fps") == 60, "Frame rate is capped at 60 fps")
+	check(ProjectSettings.get_setting("rendering/scaling_3d/scale") <= 0.85, "3D renders at 85% resolution or less")
+	var sun: DirectionalLight3D = world.find_children("*", "DirectionalLight3D", false, false)[0]
+	check(sun.directional_shadow_mode == DirectionalLight3D.SHADOW_PARALLEL_2_SPLITS and sun.directional_shadow_max_distance <= 50, "Sun shadows use two cascades within 50 m")
+	check(ProjectSettings.get_setting("rendering/lights_and_shadows/directional_shadow/size") <= 2048, "Shadow map is 2048 px or smaller")
+
 func check_city(world, car: DriveCar) -> void:
 	check(world.HALF * 2 >= 600, "City spans at least 600 m")
 	check(world.is_on_road(car.spawn), "Spawn is on a road")
@@ -226,16 +369,37 @@ func run_checks() -> void:
 			check(viewport_rect.encloses(rect) and rect.size.x >= 100 and rect.size.y >= 100, "Visible touch control %s at %s" % [id, dimensions])
 			check(not rect.intersects(world.minimap.get_global_rect()), "Minimap clear of %s at %s" % [id, dimensions])
 		check(viewport_rect.encloses(world.minimap.get_global_rect()), "Minimap visible at %s" % [dimensions])
-		var buttons: Rect2 = hud.actions.get_global_rect()
-		check(buttons.size.x > 250 and viewport_rect.encloses(buttons), "Camera, Reset and Pause buttons visible at %s" % [dimensions])
-		check(not buttons.intersects(hud.status_label.get_global_rect()), "Buttons clear of status text at %s" % [dimensions])
+		var parts := {"lever": hud.shifter, "cluster": hud.cluster, "status": hud.status_chip}
+		for id in hud.pads: parts["pad " + id] = hud.pads[id]
+		for id in hud.icons: parts["icon " + id] = hud.icons[id]
+		var problems: Array[String] = []
+		var names := parts.keys()
+		for i in names.size():
+			var a: Rect2 = parts[names[i]].get_global_rect()
+			if not viewport_rect.encloses(a): problems.append(names[i] + " off screen")
+			for j in range(i + 1, names.size()):
+				if a.intersects(parts[names[j]].get_global_rect()): problems.append(names[i] + " overlaps " + names[j])
+		check(problems.is_empty(), "All %d HUD controls on screen without overlaps at %s %s" % [names.size(), dimensions, problems])
+		check(hud.cluster.get_global_rect().encloses(world.minimap.get_global_rect()), "Minimap sits inside the dashboard cluster at %s" % [dimensions])
+		hud.set_paused(true)
+		await ticks(2)
+		check(viewport_rect.encloses(hud.pause_panel.get_global_rect()), "Pause menu fits on screen at %s" % [dimensions])
+		check_material_sizes(hud, dimensions)
+		hud.set_paused(false)
 	check(car.wheels.size() == 4 and car.front_wheels.size() == 2, "Four Porsche wheels and two steering pivots loaded")
 	check(absf(car.position.y) < 0.12, "Porsche sits at ground level")
 	car.reset_car()
 	check_wheel_geometry(car)
 	check_city(world, car)
+	check_phone_budget(world)
 	# The HUD would overwrite the throttle from (absent) touch input every frame.
 	hud.set_process(false)
+	check(car.gear == "P", "Car starts in P")
+	car.throttle = 1
+	await ticks(60)
+	car.throttle = 0
+	check(car.speed == 0 and Vector2(car.position.x - car.spawn.x, car.position.z - car.spawn.z).length() < 0.01, "P holds the car still under throttle")
+	car.shift("D")
 	await check_cameras(world, car, hud)
 	await check_cars(world, car, hud)
 	await check_audio(world, car, hud)
@@ -243,9 +407,13 @@ func run_checks() -> void:
 	await ticks(120)
 	check(car.speed > 10 and car.position.z < car.spawn.z - 13, "Accelerates and moves forward")
 	car.throttle = 0
+	check(car.shift_block_reason("R") != "" and not car.shift("R") and car.gear == "D", "Cannot shift into R while driving forward")
+	check(car.shift_block_reason("P") != "", "Cannot shift into P while moving")
 	car.brake = 1
 	await ticks(180)
-	check(car.speed < -2, "Brake stops the car and engages reverse")
+	check(car.speed == 0, "Brake stops the car without reversing (%.2f m/s)" % car.speed)
+	car.brake = 0
+	await check_gears(world, car, hud)
 	car.reset_car()
 	car.throttle = 1
 	car.steering = 1
@@ -284,8 +452,13 @@ func run_checks() -> void:
 	hud._input(release)
 	hud._process(0.016)
 	check(car.throttle == 0 and car.steering == -1, "Releasing one finger preserves the other control")
+	await check_controls(world, car, hud)
 	hud.set_paused(true)
 	check(paused and car.throttle == 0 and hud.fingers.is_empty(), "Pause clears held controls")
+	hud.show_car_credits()
+	hud._notification(Node.NOTIFICATION_WM_GO_BACK_REQUEST)
+	await process_frame
+	check(not is_instance_valid(hud.credits_dialog) and hud.paused, "Back closes the credits before the pause menu")
 	hud.set_paused(false)
 	check(not paused, "Resume restores simulation")
 	world.queue_free()

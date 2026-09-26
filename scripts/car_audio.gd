@@ -13,6 +13,8 @@ var engine: AudioStreamPlayer
 var screech: AudioStreamPlayer
 var wind: AudioStreamPlayer
 var impact: AudioStreamPlayer
+var horn: AudioStreamPlayer
+var tick: AudioStreamPlayer
 var engine_filter: AudioEffectLowPassFilter
 var rpm := IDLE
 var gear := 1
@@ -128,6 +130,30 @@ static func impact_sound() -> AudioStreamWAV:
 		samples[i] = sin(phase) * exp(-t * 9.0) + rng.randf_range(-1, 1) * 0.7 * exp(-t * 18.0) + sin(TAU * 430.0 * t) * 0.2 * exp(-t * 12.0)
 	return to_wav(normalized(samples, 0.95), false)
 
+# Two-tone car horn. Both notes complete whole cycles in 0.2 s, so it loops cleanly.
+static func horn_loop() -> AudioStreamWAV:
+	var n := int(RATE * 0.2)
+	var samples := PackedFloat32Array()
+	samples.resize(n)
+	for i in n:
+		var t := float(i) / RATE
+		var v := 0.0
+		for note in [420.0, 525.0]:
+			for k in range(1, 6):
+				v += sin(TAU * note * k * t) / (k * 1.4)
+		samples[i] = tanh(v * 0.9)
+	return to_wav(normalized(samples, 0.7), true)
+
+# Relay click of the indicator: a short, dull tick.
+static func tick_sound() -> AudioStreamWAV:
+	var n := int(RATE * 0.04)
+	var samples := PackedFloat32Array()
+	samples.resize(n)
+	for i in n:
+		var t := float(i) / RATE
+		samples[i] = (sin(TAU * 900.0 * t) * 0.6 + sin(TAU * 2600.0 * t) * 0.4) * exp(-t * 160.0)
+	return to_wav(normalized(samples, 0.6), false)
+
 static func click_sound() -> AudioStreamWAV:
 	var n := int(RATE * 0.03)
 	var samples := PackedFloat32Array()
@@ -158,12 +184,15 @@ func _ready() -> void:
 	screech = player("Screech", screech_loop())
 	wind = player("Wind", wind_loop())
 	impact = player("Impact", impact_sound())
+	horn = player("Horn", horn_loop())
+	tick = player("Tick", tick_sound())
 	screech.volume_db = -80
 	wind.volume_db = -80
 	engine.play()
 	screech.play()
 	wind.play()
 	car.crashed.connect(on_crash)
+	car.indicator_tick.connect(func(lit: bool): tick.pitch_scale = 1.0 if lit else 0.8; tick.play())
 
 func on_crash(impact_speed: float) -> void:
 	impact.volume_db = linear_to_db(clampf(impact_speed / 15.0, 0.3, 1.0))
@@ -174,6 +203,8 @@ func on_crash(impact_speed: float) -> void:
 # top speed, climbing from about 58% of the redline to the redline, then shifting.
 func target_rpm(redline: float) -> float:
 	var speed := absf(car.speed)
+	# Out of gear the engine revs freely with the throttle.
+	if car.gear in ["P", "N"]: return IDLE + engine_load * (redline * 0.75 - IDLE)
 	if speed < 0.5: return IDLE + engine_load * (redline * 0.5 - IDLE)
 	if car.speed < 0: return lerpf(1600.0, 4800.0, clampf(speed / 7.0, 0, 1))
 	var band: float = car.top_speed / GEARS
@@ -183,6 +214,8 @@ func target_rpm(redline: float) -> float:
 
 func _process(delta: float) -> void:
 	if not is_instance_valid(car): return
+	if car.horn and not horn.playing: horn.play()
+	elif not car.horn and horn.playing: horn.stop()
 	var spec := car.info()
 	var redline: float = spec.get("redline", 7500.0)
 	var speed := absf(car.speed)

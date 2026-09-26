@@ -4,8 +4,9 @@ config_version=5
 config/name="Pocket Drive"
 config/description="An offline Android driving prototype."
 run/main_scene="res://main.tscn"
+run/max_fps=60
 config/features=PackedStringArray("4.7", "GL Compatibility")
-config/icon="res://icon.svg"
+config/icon="res://assets/icon/icon_512.png"
 
 [display]
 window/size/viewport_width=1280
@@ -17,6 +18,10 @@ window/stretch/aspect="expand"
 window/handheld/orientation=0
 
 [rendering]
+
+scaling_3d/scale=0.85
+lights_and_shadows/directional_shadow/size=2048
+lights_and_shadows/directional_shadow/size.mobile=2048
 renderer/rendering_method="gl_compatibility"
 renderer/rendering_method.mobile="gl_compatibility"
 textures/vram_compression/import_etc2_astc=true
@@ -29,4 +34,4 @@ common/physics_ticks_per_second=60
 pointing/emulate_mouse_from_touch=true
 
 [application_custom]
-prototype_version="0.3.4"
+prototype_version="0.4.0"

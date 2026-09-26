@@ -555,8 +555,11 @@ func _ready() -> void:
 	sun.rotation_degrees = Vector3(-48, -28, 0)
 	sun.light_color = Color("fff0d7")
 	sun.light_energy = 1.1
+	# Shadows cost as many draw calls as the city itself, so keep them cheap on
+	# phones: two cascades over 50 m instead of four over 80 m.
 	sun.shadow_enabled = true
-	sun.directional_shadow_max_distance = 80
+	sun.directional_shadow_mode = DirectionalLight3D.SHADOW_PARALLEL_2_SPLITS
+	sun.directional_shadow_max_distance = 50
 	add_child(sun)
 	build_materials()
 	colliders = StaticBody3D.new()
@@ -600,9 +603,8 @@ func _ready() -> void:
 	minimap = Control.new()
 	minimap.set_script(MinimapScript)
 	minimap.world = self
-	minimap.position = Vector2(34, 92)
-	minimap.size = Vector2(170, 170)
-	hud.root.add_child(minimap)
+	hud.cluster.audio = audio
+	hud.cluster.hold_minimap(minimap)
 
 func switch_car() -> void:
 	car.next_model()
@@ -643,7 +645,8 @@ func follow(delta: float, distance: float, height: float) -> void:
 	camera.fov = 65
 	var target := car.global_position + Vector3(0, 1.3, 0)
 	place(unobstructed(target, target + car.global_basis.z * (distance + absf(car.speed) * 0.035) + Vector3(0, height, 0)), delta)
-	camera.look_at(target + -car.global_basis.z * 2.8, Vector3.UP)
+	# Aim just ahead of the car so it sits mid-screen, clear of the dashboard cluster.
+	camera.look_at(car.global_position + Vector3(0, 0.3, 0) - car.global_basis.z * 0.2, Vector3.UP)
 
 # Rigidly attached to the car body, looking straight ahead.
 func mount(offset: Vector3, fov: float) -> void:

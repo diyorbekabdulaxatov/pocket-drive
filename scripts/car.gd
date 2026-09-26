@@ -3,6 +3,8 @@ extends CharacterBody3D
 
 # Emitted on the first frame the car runs into a wall, tree or post.
 signal crashed(impact_speed: float)
+# Emitted each time the indicator lamps switch on or off, for the ticking sound.
+signal indicator_tick(lit: bool)
 
 var throttle := 0.0
 var brake := 0.0
@@ -27,6 +29,22 @@ var model_index := 0
 var cockpit_view := false
 var collision: CollisionShape3D
 var touching_wall := false
+# Automatic transmission selector. BRAKE only slows the car; reversing needs R.
+var gear := "P"
+const REVERSE_SPEED := 7.0
+# Front-wheel lock shown on the model, and the yaw rate at full lock (rad/s).
+const WHEEL_LOCK := 0.55
+const TURN_RATE := 1.9
+# Driver controls beyond the pedals.
+var headlights_on := false
+var indicator := ""  # "", "left", "right" or "hazard"
+var horn := false
+var sport := true  # SPORT: full acceleration; COMFORT: gentler and capped lower
+var indicator_lit := false
+var blink_time := 0.0
+var headlamps: Array[SpotLight3D] = []
+var indicator_lamps: Array[MeshInstance3D] = []
+const BLINK_PERIOD := 0.8
 
 # Driveable cars. A model file may be absent (the GT3 RS is kept out of git), in
 # which case it is skipped. "turn" and "scale" fit each model to 1 m units facing -Z;
@@ -127,7 +145,71 @@ func load_model(index: int) -> void:
 			if caliper: caliper.reparent(pivot, true)
 		wheels.append(spinner)
 		if id.begins_with("F"): front_wheels.append(pivot)
+	build_lamps()
 	set_cockpit_view(cockpit_view)
+
+# Headlamp beams and indicator lamps, placed from the model's own size so they
+# sit at the corners of whichever car is loaded.
+func build_lamps() -> void:
+	for lamp in headlamps: lamp.queue_free()
+	headlamps.clear()
+	indicator_lamps.clear()
+	var bounds := AABB()
+	var first := true
+	for m in visual.find_children("*", "MeshInstance3D", true, false):
+		var b: AABB = global_transform.affine_inverse() * m.global_transform * m.get_aabb()
+		bounds = b if first else bounds.merge(b)
+		first = false
+	var half_width := bounds.size.x / 2
+	var lamp_y := bounds.position.y + bounds.size.y * 0.5
+	for side in [-1.0, 1.0]:
+		var beam := SpotLight3D.new()
+		beam.position = Vector3(side * half_width * 0.62, lamp_y, bounds.position.z + 0.2)
+		beam.rotation_degrees = Vector3(-6, 0, 0)
+		beam.spot_range = 38.0
+		beam.spot_angle = 26.0
+		beam.light_energy = 5.0
+		beam.light_color = Color(1.0, 0.96, 0.86)
+		beam.visible = headlights_on
+		add_child(beam)
+		headlamps.append(beam)
+	var amber := StandardMaterial3D.new()
+	amber.albedo_color = Color(1.0, 0.62, 0.1)
+	amber.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
+	var lamp_mesh := BoxMesh.new()
+	lamp_mesh.size = Vector3(0.16, 0.08, 0.05)
+	for z in [bounds.position.z + 0.14, bounds.end.z - 0.14]:
+		for side in [-1.0, 1.0]:
+			var lamp := MeshInstance3D.new()
+			lamp.mesh = lamp_mesh
+			lamp.material_override = amber
+			lamp.position = Vector3(side * half_width * 0.84, lamp_y + 0.02, z)
+			lamp.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+			lamp.set_meta("side", "left" if side < 0 else "right")
+			lamp.visible = false
+			visual.add_child(lamp)
+			indicator_lamps.append(lamp)
+
+func set_headlights(on: bool) -> void:
+	headlights_on = on
+	for beam in headlamps: beam.visible = on
+
+# Pressing the active signal again cancels it; hazard overrides both sides.
+func toggle_indicator(mode: String) -> void:
+	indicator = "" if indicator == mode else mode
+	blink_time = 0.0
+	indicator_lit = false
+
+func _process(delta: float) -> void:
+	var lit := false
+	if indicator != "":
+		blink_time += delta
+		lit = fmod(blink_time, BLINK_PERIOD) < BLINK_PERIOD / 2
+	if lit != indicator_lit:
+		indicator_lit = lit
+		indicator_tick.emit(lit)
+	for lamp in indicator_lamps:
+		lamp.visible = lit and (indicator == "hazard" or indicator == lamp.get_meta("side"))
 
 func cockpit_part(mesh: Mesh, at: Vector3, color: Color, parent: Node3D, basis := Basis(), unshaded := false) -> MeshInstance3D:
 	var m := StandardMaterial3D.new()
@@ -223,21 +305,42 @@ func reset_car() -> void:
 	brake = 0
 	steering = 0
 
+# Returns an empty string when the shift is allowed, otherwise why not. Like a
+# real automatic, P and R (and D from R) need the car to be almost stopped.
+func shift_block_reason(to: String) -> String:
+	if to == gear or to == "N": return ""
+	if to == "P" and absf(speed) > 0.8: return "Stop the car to shift into P"
+	if to == "R" and speed > 0.8: return "Stop the car to shift into R"
+	if to == "D" and speed < -0.8: return "Stop the car to shift into D"
+	return ""
+
+func shift(to: String) -> bool:
+	if shift_block_reason(to) != "": return false
+	gear = to
+	return true
+
 func _physics_process(delta: float) -> void:
 	var before := global_position
 	var on_grass: bool = road_check.is_valid() and not road_check.call(global_position)
-	var limit := 12.0 if on_grass else top_speed
-	if brake > 0:
-		if speed > 0.4: speed = move_toward(speed, 0, 22 * brake * delta)
-		else: speed = move_toward(speed, -7.0, 5.0 * brake * delta)
-	elif throttle > 0:
+	var limit := 12.0 if on_grass else top_speed * (1.0 if sport else 0.85)
+	var pull := acceleration * (1.0 if sport else 0.65)
+	var driving_forward := gear == "D" and throttle > 0
+	var driving_back := gear == "R" and throttle > 0
+	if gear == "P":
+		speed = move_toward(speed, 0, 30 * delta)
+	elif brake > 0:
+		speed = move_toward(speed, 0, 22 * brake * delta)
+	elif driving_forward:
 		if speed < -0.4: speed = move_toward(speed, 0, 18 * throttle * delta)
-		else: speed = move_toward(speed, limit, acceleration * throttle * delta)
+		else: speed = move_toward(speed, limit, pull * throttle * delta)
+	elif driving_back:
+		if speed > 0.4: speed = move_toward(speed, 0, 18 * throttle * delta)
+		else: speed = move_toward(speed, -REVERSE_SPEED, 5.0 * throttle * delta)
 	else:
 		speed = move_toward(speed, 0, (1.8 + absf(speed) * 0.07) * delta)
 	if on_grass and speed > limit: speed = move_toward(speed, limit, 10 * delta)
-	var turn_rate := 1.15 / (1.0 + absf(speed) / 28.0)
-	heading -= steering * turn_rate * clampf(speed / 5.0, -1, 1) * delta
+	var turn_rate := TURN_RATE / (1.0 + absf(speed) / 28.0)
+	heading -= steering * turn_rate * clampf(speed / 4.0, -1, 1) * delta
 	rotation.y = heading
 	var forward := -global_basis.z
 	velocity.x = forward.x * speed
@@ -256,7 +359,7 @@ func _physics_process(delta: float) -> void:
 	touching_wall = hit_wall
 	distance_driven += Vector2(global_position.x - before.x, global_position.z - before.z).length()
 	visual.rotation.z = lerp(visual.rotation.z, steering * speed * 0.0025, 8 * delta)
-	for pivot in front_wheels: pivot.rotation.y = -steering * 0.35
+	for pivot in front_wheels: pivot.rotation.y = -steering * WHEEL_LOCK
 	if cockpit.visible:
 		speed_needle.rotation.z = 2.2 - clampf(absf(speed) / top_speed, 0, 1) * 4.4
 	for wheel in wheels: wheel.rotation.x -= speed * delta / wheel_radius

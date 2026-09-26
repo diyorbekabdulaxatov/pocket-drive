@@ -1,18 +1,20 @@
-# Pocket Drive — Android prototype 0.3.4
+# Pocket Drive — Android prototype 0.4.0
 
 A small offline driving prototype made in Godot 4.7.2 with GDScript. The environment uses original simple geometry. The car uses the supplied Porsche 911 Carrera 4S model by Karol Miklas, adapted under CC BY-SA 4.0. See `assets/porsche/ATTRIBUTION.md` and the in-game pause menu credits.
 
 ## Play
 
-- Hold GAS to accelerate.
-- Hold either steering arrow while pressing GAS to turn.
-- Hold BRAKE / R to stop, then keep holding to reverse.
+- Tap or drag the gear lever (right) to D to drive; the car starts in P. Shift into P, R, or from R into D only when stopped.
+- Hold the GAS pedal to accelerate (backwards in R). Hold the BRAKE pedal to stop; it does not reverse.
+- Left panel: Pause, SPORT/CITY mode, headlights, hazard lights, horn (hold), camera, and left/right turn signals. Reset is next to the gear lever.
+- The dashboard cluster shows speed, the minimap and engine revs.
+- Hold either steering arrow while moving to turn.
 - Reset returns the car to the starting street.
 - Pause → Switch car (or V) changes between the 911 Carrera 4S and, when installed, the 911 GT3 RS.
 - Camera (top right) cycles seven views: Chase, Far chase, Hood, Bumper, Driver, Top-down and Cinematic roadside cameras.
 - The minimap (top left) shows roads, buildings and your heading. North is up.
 - Pause stops the simulation. Switching away from the app also pauses it.
-- Keyboard fallback: WASD or arrow keys, Space for brake, R to reset, C to change camera, V to switch car, Escape to pause.
+- Keyboard fallback: WASD or arrow keys, Space for brake, R to reset, C to change camera, V to switch car, 1-4 for P/R/N/D, H headlights, Q/E turn signals, X hazards, B horn (hold), M mode, Escape to pause.
 
 ## Scope
 
@@ -53,3 +55,15 @@ Version 0.3.2 adds a built cockpit for the Carrera's driver view (the model has 
 Version 0.3.3 adds sound, all synthesised in code at start-up (no audio files): an engine whose revs follow a six-speed automatic gearbox (the GT3 RS revs higher and sounds sharper), tyre screech in fast turns and hard braking, wind and road noise that rise with speed, a crash thud on hitting walls, trees or posts, button clicks, and a Sound On/Off button in the pause menu.
 
 Version 0.3.4 fills wide phone screens (the view now expands instead of showing black bars) and fixes the driver, hood and bumper cameras trailing the car by one physics step, which put the driver camera behind the seat at top speed. The headless smoke test may print an "ObjectDB instances were leaked" warning for sound streams at exit; that comes from Godot's dummy audio driver and does not affect the game.
+
+Version 0.3.5 brings the HUD up to Material Design 3 minimums on phones: 48 dp touch targets for every button, 14 sp button text and 12 sp labels, outlined titles and a dark chip behind the driving hint for contrast over the sky, a two-column pause menu that fits a landscape phone, controls kept inside the screen's safe area (camera cutout), and Back closing the credits dialog before the pause menu. The smoke test checks these sizes at 1280x720 and 2340x1080.
+
+Version 0.3.6 adds the app icon: a red sports car on a curving road over a teal background, built as an Android adaptive icon (foreground, background and a monochrome layer for themed icons) plus a 192 px legacy icon. `assets/icon/icon_art.png` is the retouched source art with the manufacturer crests removed; it is excluded from the APK.
+
+Version 0.3.7 adds a P / R / N / D automatic gear selector above the pedals (keys 1-4). The car starts in P; P and R, and D from R, can only be selected when the car is stopped. BRAKE now only brakes, GAS in R reverses, and N revs the engine without driving. Steering is sharper (about a 7 m turning circle at 36 km/h, down from 12 m) with more visible front-wheel lock.
+
+Version 0.3.8 redesigns the driving HUD in the style of mobile driving simulators: metal gas and brake pedals, a vertical P/R/N/D gear lever (tap or drag), a left panel of icon buttons (pause, SPORT/CITY mode, headlights with real beams, hazard lights, horn, camera, turn signals with blinking lamps and a ticking relay sound), and a dashboard cluster with speed dial, minimap and rev counter. All touches are routed centrally, so a thumb on a pedal never blocks another finger from pressing buttons. The chase camera now frames the car mid-screen above the cluster.
+
+Version 0.3.9 fixes the steering arrows also switching the turn signals on (and holding a signal button steering), caused by both controls sharing the ids "left" and "right".
+
+Version 0.4.0 fixes the phone heating up. Measured on a Galaxy S24 with the car parked at the start: the game rendered at the screen's 120 Hz and sun shadows used four cascades (362 of 545 draw calls), keeping the GPU 77-86% busy. It is now capped at 60 fps, shadows use two cascades within 50 m on a 2048 px map, and the 3D view renders at 85% resolution (the HUD stays sharp). GPU work dropped by roughly half, and the chip temperature now falls instead of rising during play. The smoke test guards these limits.
