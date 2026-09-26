@@ -64,6 +64,25 @@ func check_wheel_geometry(car: DriveCar) -> void:
 		check(absf(left.z - right.z) < 0.01, axle + " axle hubs align in Z")
 		check(left.x < 0 and right.x > 0 and absf(left.x + right.x) < 0.01, axle + " axle hubs mirror in X")
 
+func check_city(world, car: DriveCar) -> void:
+	check(world.HALF * 2 >= 600, "City spans at least 600 m")
+	check(world.is_on_road(car.spawn), "Spawn is on a road")
+	check(world.buildings.size() >= 100, "City has %d buildings" % world.buildings.size())
+	var on_road := 0
+	for b in world.buildings:
+		var footprint := Rect2(b.position.x, b.position.z, b.size.x, b.size.z)
+		var nearest := Vector2.ZERO.clamp(footprint.position, footprint.end)
+		if nearest.length() < world.ROUNDABOUT: on_road += 1
+		for r in world.road_rects:
+			if footprint.intersects(r): on_road += 1
+	check(on_road == 0, "No building stands on a road")
+	var blocked := 0
+	for t in world.trees:
+		if world.is_on_road(t) and absf(t.x) > 2.5 and absf(t.z) > 2.5: blocked += 1
+	check(blocked == 0, "No tree stands on a road outside the boulevard median")
+	var meshes: int = world.find_children("*", "MeshInstance3D", false, false).size()
+	check(meshes < 300, "Static city is batched into %d meshes" % meshes)
+
 func run_checks() -> void:
 	var world = load("res://main.tscn").instantiate()
 	root.add_child(world)
@@ -77,14 +96,17 @@ func run_checks() -> void:
 		for id in hud.pads:
 			var rect: Rect2 = hud.pads[id].get_global_rect()
 			check(viewport_rect.encloses(rect) and rect.size.x >= 100 and rect.size.y >= 100, "Visible touch control %s at %s" % [id, dimensions])
+			check(not rect.intersects(world.minimap.get_global_rect()), "Minimap clear of %s at %s" % [id, dimensions])
+		check(viewport_rect.encloses(world.minimap.get_global_rect()), "Minimap visible at %s" % [dimensions])
 	check(car.wheels.size() == 4 and car.front_wheels.size() == 2, "Four Porsche wheels and two steering pivots loaded")
 	check(absf(car.position.y) < 0.12, "Porsche sits at ground level")
 	car.reset_car()
 	check_wheel_geometry(car)
+	check_city(world, car)
 	hud.set_process(false)
 	car.throttle = 1
 	await ticks(120)
-	check(car.speed > 10 and car.position.z < 35, "Accelerates and moves forward")
+	check(car.speed > 10 and car.position.z < car.spawn.z - 13, "Accelerates and moves forward")
 	car.throttle = 0
 	car.brake = 1
 	await ticks(180)
@@ -93,13 +115,24 @@ func run_checks() -> void:
 	car.throttle = 1
 	car.steering = 1
 	await ticks(90)
-	check(car.position.x > 1 and car.heading < -0.2, "Right steering turns right")
+	check(car.position.x > car.spawn.x + 1 and car.heading < -0.2, "Right steering turns right")
 	car.reset_car()
-	car.position = Vector3(106, 0.1, 0)
+	car.position = Vector3(world.HALF - 4, 0.1, 0)
 	car.heading = -PI / 2
 	car.throttle = 1
 	await ticks(120)
-	check(car.position.x < 109, "Boundary collision prevents escape")
+	check(car.position.x < world.HALF, "Boundary collision prevents escape")
+	car.reset_car()
+	car.position = Vector3(0, 0.08, 17)
+	car.throttle = 1
+	await ticks(120)
+	check(car.position.z > world.ISLAND + 1.5, "Roundabout island blocks the car")
+	car.reset_car()
+	car.position = Vector3(300, 0.08, 0)
+	check(not world.is_on_road(car.position), "Perimeter verge is off-road")
+	car.throttle = 1
+	await ticks(240)
+	check(car.speed > 11 and car.speed <= 12.01, "Off-road speed is limited to 12 m/s")
 	car.reset_car()
 	check(car.speed == 0 and car.position.is_equal_approx(car.spawn), "Reset restores spawn and stops motion")
 	for item in [[0, "gas"], [1, "left"]]:

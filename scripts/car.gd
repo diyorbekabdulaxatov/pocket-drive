@@ -11,6 +11,9 @@ var visual: Node3D
 var wheels: Array[Node3D] = []
 var front_wheels: Array[Node3D] = []
 var spawn := Vector3(0, 0.08, 48)
+# Set by the world: whether a point is paved road, and how far the car may roam.
+var road_check: Callable
+var world_limit := 120.0
 const TOP_SPEED := 25.0
 
 const PorscheModel = preload("res://assets/porsche/porsche_mobile.glb")
@@ -57,7 +60,7 @@ func reset_car() -> void:
 
 func _physics_process(delta: float) -> void:
 	var before := global_position
-	var on_grass := absf(global_position.x) > 7 and absf(global_position.z) > 7 and absf(absf(global_position.x) - 64) > 7 and absf(absf(global_position.z) - 64) > 7
+	var on_grass: bool = road_check.is_valid() and not road_check.call(global_position)
 	var limit := 12.0 if on_grass else TOP_SPEED
 	if brake > 0:
 		if speed > 0.4: speed = move_toward(speed, 0, 22 * brake * delta)
@@ -85,4 +88,4 @@ func _physics_process(delta: float) -> void:
 	visual.rotation.z = lerp(visual.rotation.z, steering * speed * 0.0025, 8 * delta)
 	for pivot in front_wheels: pivot.rotation.y = -steering * 0.35
 	for wheel in wheels: wheel.rotation.x -= speed * delta / 0.334
-	if position.y < -10 or absf(position.x) > 120 or absf(position.z) > 120: reset_car()
+	if position.y < -10 or absf(position.x) > world_limit or absf(position.z) > world_limit: reset_car()
