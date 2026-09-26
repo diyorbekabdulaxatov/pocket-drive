@@ -1,0 +1,13 @@
+# Godot's generated imports and editor state
+.godot/
+.export/
+export_credentials.cfg
+# Local builds and signing secrets
+*.apk
+*.aab
+*.keystore
+*.jks
+.env
+.env.*
+# macOS
+.DS_Store
