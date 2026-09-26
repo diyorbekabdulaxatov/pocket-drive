@@ -50,7 +50,7 @@ func _ready() -> void:
 	brand.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	root.add_child(brand)
 	brand.add_child(label("POCKET DRIVE", 28))
-	brand.add_child(label("FREE ROAM  /  PROTOTYPE 01", 14, Color("173b49")))
+	brand.add_child(label("FREE ROAM  /  PROTOTYPE", 14, Color("173b49")))
 	var actions := HBoxContainer.new()
 	actions.set_anchors_and_offsets_preset(Control.PRESET_TOP_RIGHT)
 	actions.position = Vector2(-260, 22)
@@ -179,7 +179,7 @@ func _notification(what: int) -> void:
 func show_car_credits() -> void:
 	var dialog := AcceptDialog.new()
 	dialog.title = "Porsche model credits"
-	dialog.dialog_text = "Based on (FREE) Porsche 911 Carrera 4S by Karol Miklas\n(Lionsharp Studios).\n\nSource: https://sketchfab.com/3d-models/\nfree-porsche-911-carrera-4s-d01b254483794de3819786d93e0e1ebf\nAuthor: https://sketchfab.com/karolmiklas\n\nModel and this adaptation: Creative Commons BY-SA 4.0\nhttps://creativecommons.org/licenses/by-sa/4.0/\n\nChanges: reduced polygons and textures, removed ground and\nclearcoat shell, separated wheels, adjusted scale and materials.\nVehicle design and trademarks belong to their respective owners."
+	dialog.dialog_text = "Based on (FREE) Porsche 911 Carrera 4S by Karol Miklas.\n\nSource: https://sketchfab.com/3d-models/\nfree-porsche-911-carrera-4s-d01b254483794de3819786d93e0e1ebf\nAuthor: https://sketchfab.com/karolmiklas\n\nModel and this adaptation: Creative Commons BY-SA 4.0\nhttps://creativecommons.org/licenses/by-sa/4.0/\n\nChanges: reduced polygons and textures, removed ground and\nclearcoat shell, separated wheels, adjusted scale and materials.\nVehicle design and trademarks belong to their respective owners."
 	dialog.add_theme_font_size_override("font_size", 18)
 	root.add_child(dialog)
 	dialog.popup_centered(Vector2i(760, 440))

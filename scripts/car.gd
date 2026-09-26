@@ -29,12 +29,18 @@ func _ready() -> void:
 	visual.add_child(model)
 	for id in ["FL", "FR", "RL", "RR"]:
 		var wheel := model.find_child("Wheel" + id, true, false) as Node3D
-		assert(wheel != null, "Porsche wheel missing: " + id)
+		if wheel == null:
+			push_error("Porsche wheel missing: " + id)
+			continue
 		var pivot := Node3D.new()
 		pivot.name = "Steering" + id
 		visual.add_child(pivot)
 		pivot.global_position = wheel.global_position
 		wheel.reparent(pivot, true)
+		# Brake calipers steer with the hub but must not spin with the tyre.
+		for child in wheel.find_children("Cylinder*", "MeshInstance3D", true, false):
+			if "_3_" in String(child.name):
+				child.reparent(pivot, true)
 		wheels.append(wheel)
 		if id.begins_with("F"): front_wheels.append(pivot)
 	reset_car()

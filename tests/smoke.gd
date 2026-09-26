@@ -11,6 +11,59 @@ func _initialize() -> void:
 func ticks(count: int) -> void:
 	for n in count: await physics_frame
 
+func tyre_bounds(tyre: MeshInstance3D, frame: Node3D) -> AABB:
+	return (frame.global_transform.affine_inverse() * tyre.global_transform) * tyre.get_aabb()
+
+func check_wheel_geometry(car: DriveCar) -> void:
+	var hubs: Dictionary = {}
+	for wheel in car.wheels:
+		var id := String(wheel.name).trim_prefix("Wheel")
+		var pivot := wheel.get_parent() as Node3D
+		hubs[id] = car.to_local(pivot.global_position)
+		var tyre: MeshInstance3D
+		var spinning_calipers := 0
+		for child in wheel.find_children("Cylinder*", "MeshInstance3D", true, false):
+			if "_2_" in String(child.name): tyre = child
+			if "_3_" in String(child.name): spinning_calipers += 1
+		check(spinning_calipers == 0, id + " spinning wheel excludes calipers")
+		check(tyre != null, id + " tyre mesh exists")
+		if tyre == null: continue
+		var bounds := tyre_bounds(tyre, wheel)
+		check(absf(bounds.size.y - bounds.size.z) < 0.01, id + " tyre is round around local X")
+		check(bounds.get_center().length() < 0.01, id + " tyre geometry is centered on hub")
+		print("MEASURE ", id, " tyre size=", bounds.size, " centre=", bounds.get_center(), " spawn pivot=", pivot.global_position)
+		var original_rotation := wheel.rotation
+		var before := tyre_bounds(tyre, pivot).get_center()
+		var calipers: Array[Node3D] = []
+		var caliper_transforms: Array[Transform3D] = []
+		for child in pivot.find_children("Cylinder*", "MeshInstance3D", true, false):
+			if "_3_" in String(child.name):
+				calipers.append(child)
+				caliper_transforms.append(child.global_transform)
+		check(calipers.size() == 1, id + " steering pivot retains one caliper")
+		wheel.rotation.x += PI / 2
+		check(tyre_bounds(tyre, pivot).get_center().distance_to(before) < 0.001, id + " 90-degree spin keeps tyre centre fixed")
+		for i in calipers.size():
+			check(calipers[i].global_transform.is_equal_approx(caliper_transforms[i]), id + " caliper stays fixed during spin")
+		wheel.rotation = original_rotation
+		# The caliper follows its pivot when steering; it must not be attached
+		# directly to the car body as a workaround for its unwanted spinning.
+		var pivot_rotation := pivot.rotation
+		var local_calipers: Array[Transform3D] = []
+		for caliper in calipers: local_calipers.append(pivot.global_transform.affine_inverse() * caliper.global_transform)
+		pivot.rotation.y += 0.3
+		for i in calipers.size():
+			check((pivot.global_transform.affine_inverse() * calipers[i].global_transform).is_equal_approx(local_calipers[i]), id + " caliper follows steering pivot")
+		pivot.rotation = pivot_rotation
+	for axle in ["F", "R"]:
+		if not hubs.has(axle + "L") or not hubs.has(axle + "R"):
+			check(false, axle + " axle has both hubs")
+			continue
+		var left: Vector3 = hubs[axle + "L"]
+		var right: Vector3 = hubs[axle + "R"]
+		check(absf(left.z - right.z) < 0.01, axle + " axle hubs align in Z")
+		check(left.x < 0 and right.x > 0 and absf(left.x + right.x) < 0.01, axle + " axle hubs mirror in X")
+
 func run_checks() -> void:
 	var world = load("res://main.tscn").instantiate()
 	root.add_child(world)
@@ -26,8 +79,8 @@ func run_checks() -> void:
 			check(viewport_rect.encloses(rect) and rect.size.x >= 100 and rect.size.y >= 100, "Visible touch control %s at %s" % [id, dimensions])
 	check(car.wheels.size() == 4 and car.front_wheels.size() == 2, "Four Porsche wheels and two steering pivots loaded")
 	check(absf(car.position.y) < 0.12, "Porsche sits at ground level")
-	for wheel in car.wheels:
-		check(wheel.position.length() < 0.001, "Wheel rotates around its own pivot")
+	car.reset_car()
+	check_wheel_geometry(car)
 	hud.set_process(false)
 	car.throttle = 1
 	await ticks(120)
