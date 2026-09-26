@@ -11,3 +11,6 @@ export_credentials.cfg
 .env.*
 # macOS
 .DS_Store
+
+# Second car: CC BY-NC-SA model of uncertain origin, kept local only (not published)
+assets/gt3rs/

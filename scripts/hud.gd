@@ -1,6 +1,8 @@
 extends CanvasLayer
 
 signal reset_requested
+signal camera_requested
+signal car_requested
 signal pause_changed(paused: bool)
 var car: DriveCar
 var pads: Dictionary = {}
@@ -9,6 +11,10 @@ var mouse_pad := ""
 var speed_label: Label
 var gear_label: Label
 var status_label: Label
+var status_hint := "Hold BRAKE to stop, then reverse"
+var status_timer := 0.0
+var actions: HBoxContainer
+var switch_button: Button
 var root: Control
 var pause_panel: PanelContainer
 var paused := false
@@ -16,6 +22,9 @@ var ui_steering := 0.0
 var ui_throttle := 0.0
 var ui_brake := 0.0
 const Pad = preload("res://scripts/drive_pad.gd")
+const CarAudio = preload("res://scripts/car_audio.gd")
+var click: AudioStreamPlayer
+var sound_button: Button
 
 func label(text: String, font_size: int, color := Color("f1f5f1")) -> Label:
 	var l := Label.new()
@@ -35,12 +44,16 @@ func button(text: String, action: Callable) -> Button:
 	style.content_margin_left = 20
 	style.content_margin_right = 20
 	b.add_theme_stylebox_override("normal", style)
+	b.pressed.connect(func(): click.play())
 	b.pressed.connect(action)
 	b.focus_mode = Control.FOCUS_NONE
 	return b
 
 func _ready() -> void:
 	process_mode = Node.PROCESS_MODE_ALWAYS
+	click = AudioStreamPlayer.new()
+	click.stream = CarAudio.click_sound()
+	add_child(click)
 	root = Control.new()
 	root.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	root.mouse_filter = Control.MOUSE_FILTER_IGNORE
@@ -51,11 +64,16 @@ func _ready() -> void:
 	root.add_child(brand)
 	brand.add_child(label("POCKET DRIVE", 28))
 	brand.add_child(label("FREE ROAM  /  PROTOTYPE", 14, Color("173b49")))
-	var actions := HBoxContainer.new()
+	# Anchored to the top-right corner and growing leftwards, whatever the button widths.
+	actions = HBoxContainer.new()
 	actions.set_anchors_and_offsets_preset(Control.PRESET_TOP_RIGHT)
-	actions.position = Vector2(-260, 22)
+	actions.grow_horizontal = Control.GROW_DIRECTION_BEGIN
+	actions.offset_right = -34
+	actions.offset_left = -34
+	actions.offset_top = 22
 	actions.add_theme_constant_override("separation", 12)
 	root.add_child(actions)
+	actions.add_child(button("Camera", func(): camera_requested.emit()))
 	actions.add_child(button("Reset", func(): clear_inputs(); reset_requested.emit()))
 	actions.add_child(button("Pause", func(): set_paused(not paused)))
 	var meter := VBoxContainer.new()
@@ -70,7 +88,7 @@ func _ready() -> void:
 	gear_label = label("N   /   KM/H", 16)
 	gear_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	meter.add_child(gear_label)
-	status_label = label("Hold BRAKE to stop, then reverse", 16)
+	status_label = label(status_hint, 16)
 	status_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	status_label.set_anchors_and_offsets_preset(Control.PRESET_CENTER_TOP)
 	status_label.position = Vector2(-250, 28)
@@ -82,7 +100,7 @@ func _ready() -> void:
 	make_pad("gas", "GAS", Vector2(-164, -186), Vector2(132, 150), true)
 	pause_panel = PanelContainer.new()
 	pause_panel.set_anchors_and_offsets_preset(Control.PRESET_CENTER)
-	pause_panel.position = Vector2(-210, -150)
+	pause_panel.position = Vector2(-210, -275)
 	pause_panel.size = Vector2(420, 300)
 	var box := StyleBoxFlat.new()
 	box.bg_color = Color("102c38")
@@ -97,6 +115,11 @@ func _ready() -> void:
 	content.add_child(label("Explore at your own pace.", 20))
 	content.add_child(button("Resume driving", func(): set_paused(false)))
 	content.add_child(button("Reset car", func(): reset_requested.emit(); set_paused(false)))
+	switch_button = button("Switch car", func(): car_requested.emit())
+	switch_button.visible = DriveCar.available_models().size() > 1
+	content.add_child(switch_button)
+	sound_button = button("Sound: On", toggle_sound)
+	content.add_child(sound_button)
 	content.add_child(button("Car model credits", show_car_credits))
 	content.add_child(label("Godot Engine · godotengine.org/license", 14, Color("b5c8ce")))
 	pause_panel.hide()
@@ -122,6 +145,8 @@ func _input(event: InputEvent) -> void:
 	if event is InputEventKey and event.pressed and not event.echo:
 		if event.keycode == KEY_ESCAPE: set_paused(not paused)
 		if event.keycode == KEY_R and not paused: clear_inputs(); reset_requested.emit()
+		if event.keycode == KEY_C and not paused: camera_requested.emit()
+		if event.keycode == KEY_V: car_requested.emit()
 	if paused: return
 	if event is InputEventScreenTouch:
 		if event.pressed: fingers[event.index] = pad_at(event.position)
@@ -136,7 +161,15 @@ func _input(event: InputEvent) -> void:
 func held(id: String) -> bool:
 	return mouse_pad == id or id in fingers.values()
 
-func _process(_delta: float) -> void:
+# Shows a short message in place of the driving hint for two seconds.
+func show_status(text: String) -> void:
+	status_label.text = text
+	status_timer = 2.0
+
+func _process(delta: float) -> void:
+	if status_timer > 0:
+		status_timer -= delta
+		if status_timer <= 0: status_label.text = status_hint
 	if not is_instance_valid(car): return
 	var left := held("left") or Input.is_physical_key_pressed(KEY_A) or Input.is_physical_key_pressed(KEY_LEFT)
 	var right := held("right") or Input.is_physical_key_pressed(KEY_D) or Input.is_physical_key_pressed(KEY_RIGHT)
@@ -176,10 +209,15 @@ func _notification(what: int) -> void:
 	elif what == NOTIFICATION_WM_GO_BACK_REQUEST:
 		if is_instance_valid(pause_panel): set_paused(not paused)
 
+func toggle_sound() -> void:
+	var master := AudioServer.get_bus_index("Master")
+	AudioServer.set_bus_mute(master, not AudioServer.is_bus_mute(master))
+	sound_button.text = "Sound: Off" if AudioServer.is_bus_mute(master) else "Sound: On"
+
 func show_car_credits() -> void:
 	var dialog := AcceptDialog.new()
-	dialog.title = "Porsche model credits"
-	dialog.dialog_text = "Based on (FREE) Porsche 911 Carrera 4S by Karol Miklas.\n\nSource: https://sketchfab.com/3d-models/\nfree-porsche-911-carrera-4s-d01b254483794de3819786d93e0e1ebf\nAuthor: https://sketchfab.com/karolmiklas\n\nModel and this adaptation: Creative Commons BY-SA 4.0\nhttps://creativecommons.org/licenses/by-sa/4.0/\n\nChanges: reduced polygons and textures, removed ground and\nclearcoat shell, separated wheels, adjusted scale and materials.\nVehicle design and trademarks belong to their respective owners."
+	dialog.title = car.info().name + " model credits"
+	dialog.dialog_text = car.info().credits
 	dialog.add_theme_font_size_override("font_size", 18)
 	root.add_child(dialog)
 	dialog.popup_centered(Vector2i(760, 440))

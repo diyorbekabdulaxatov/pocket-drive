@@ -3,6 +3,7 @@ extends Node3D
 const CarScript = preload("res://scripts/car.gd")
 const HudScript = preload("res://scripts/hud.gd")
 const MinimapScript = preload("res://scripts/minimap.gd")
+const CarAudioScript = preload("res://scripts/car_audio.gd")
 
 # A modern city in metres; north is -Z. Seven streets per axis plus a perimeter
 # loop form the road grid, and the two central boulevards meet at a roundabout.
@@ -52,7 +53,11 @@ var car: DriveCar
 var camera: Camera3D
 var hud: CanvasLayer
 var minimap: Control
+var audio: Node
 var camera_ready := false
+const CAMERA_MODES := ["Chase", "Far chase", "Hood", "Bumper", "Driver", "Top-down", "Cinematic"]
+var camera_mode := 0
+var cinematic_spot := Vector3.INF
 var random := RandomNumberGenerator.new()
 var lines: Array[float] = []
 var road_rects: Array[Rect2] = []
@@ -521,6 +526,9 @@ func build_meshes() -> void:
 	add_child(canopies)
 
 func _ready() -> void:
+	# Place cameras after the car has moved this physics step; otherwise views fixed
+	# to the car trail it by one step (about 0.5 m at top speed).
+	process_physics_priority = 1
 	random.seed = 1234
 	var environment := WorldEnvironment.new()
 	var env := Environment.new()
@@ -570,6 +578,11 @@ func _ready() -> void:
 	car.road_check = is_on_road
 	car.world_limit = HALF + 20
 	add_child(car)
+	audio = Node.new()
+	audio.name = "CarAudio"
+	audio.set_script(CarAudioScript)
+	audio.car = car
+	car.add_child(audio)
 	camera = Camera3D.new()
 	camera.name = "FollowCamera"
 	camera.fov = 65
@@ -581,7 +594,9 @@ func _ready() -> void:
 	hud.set_script(HudScript)
 	hud.car = car
 	add_child(hud)
-	hud.reset_requested.connect(func(): car.reset_car(); camera_ready = false)
+	hud.reset_requested.connect(func(): car.reset_car(); camera_ready = false; cinematic_spot = Vector3.INF)
+	hud.camera_requested.connect(cycle_camera)
+	hud.car_requested.connect(switch_car)
 	minimap = Control.new()
 	minimap.set_script(MinimapScript)
 	minimap.world = self
@@ -589,15 +604,70 @@ func _ready() -> void:
 	minimap.size = Vector2(170, 170)
 	hud.root.add_child(minimap)
 
+func switch_car() -> void:
+	car.next_model()
+	camera_ready = false
+	hud.show_status("Car: " + car.info().name)
+
+func cycle_camera() -> void:
+	camera_mode = (camera_mode + 1) % CAMERA_MODES.size()
+	camera_ready = false
+	cinematic_spot = Vector3.INF
+	car.set_cockpit_view(CAMERA_MODES[camera_mode] == "Driver")
+	hud.show_status("Camera: " + CAMERA_MODES[camera_mode])
+
 func _physics_process(delta: float) -> void:
-	var target := car.global_position + Vector3(0, 1.3, 0)
-	var desired: Vector3 = target + car.global_basis.z * (5.3 + absf(car.speed) * 0.035) + Vector3(0, 2.6, 0)
-	var query := PhysicsRayQueryParameters3D.create(target, desired)
+	match CAMERA_MODES[camera_mode]:
+		"Chase": follow(delta, 5.3, 2.6)
+		"Far chase": follow(delta, 9.5, 4.4)
+		"Hood": mount(Vector3(0, 1.12, -0.95), 75.0)
+		"Bumper": mount(Vector3(0, 0.55, -2.45), 80.0)
+		"Driver": mount(car.info().eye, 72.0)
+		"Top-down": overhead(delta)
+		"Cinematic": cinematic()
+
+# Keeps a point between the car and the wanted camera spot out of walls.
+func unobstructed(from: Vector3, to: Vector3) -> Vector3:
+	var query := PhysicsRayQueryParameters3D.create(from, to)
 	query.exclude = [car.get_rid()]
 	var hit := get_world_3d().direct_space_state.intersect_ray(query)
-	if not hit.is_empty(): desired = hit.position + hit.normal * 0.4
+	return to if hit.is_empty() else hit.position + hit.normal * 0.4
+
+func place(desired: Vector3, delta: float, sharpness := 7.0) -> void:
 	if not camera_ready:
 		camera.global_position = desired
 		camera_ready = true
-	else: camera.global_position = camera.global_position.lerp(desired, 1 - exp(-7 * delta))
+	else: camera.global_position = camera.global_position.lerp(desired, 1 - exp(-sharpness * delta))
+
+func follow(delta: float, distance: float, height: float) -> void:
+	camera.fov = 65
+	var target := car.global_position + Vector3(0, 1.3, 0)
+	place(unobstructed(target, target + car.global_basis.z * (distance + absf(car.speed) * 0.035) + Vector3(0, height, 0)), delta)
 	camera.look_at(target + -car.global_basis.z * 2.8, Vector3.UP)
+
+# Rigidly attached to the car body, looking straight ahead.
+func mount(offset: Vector3, fov: float) -> void:
+	camera.fov = fov
+	camera.global_transform = Transform3D(car.global_basis, car.global_transform * offset)
+	camera.rotate_object_local(Vector3.RIGHT, -0.04)
+	camera_ready = true
+
+# High above and slightly behind, turning with the car so steering stays intuitive.
+func overhead(delta: float) -> void:
+	camera.fov = 50
+	var forward := -car.global_basis.z
+	place(car.global_position + Vector3(0, 42, 0) - forward * 10, delta, 5.0)
+	camera.look_at(car.global_position + forward * 6, forward)
+
+# TV-style: a fixed roadside camera ahead of the car cuts to a new spot once the car is far past it.
+func cinematic() -> void:
+	camera.fov = 55
+	var target := car.global_position + Vector3(0, 1.0, 0)
+	if cinematic_spot == Vector3.INF or cinematic_spot.distance_to(target) > 42:
+		var forward := -car.global_basis.z
+		var side := car.global_basis.x * (7.0 if randf() < 0.5 else -7.0)
+		var ahead := 28.0 if car.speed >= 0 else -28.0
+		cinematic_spot = unobstructed(target, target + forward * ahead + side + Vector3(0, randf_range(0.8, 5.0), 0))
+	camera.global_position = cinematic_spot
+	if camera.global_position.distance_to(target) > 0.5: camera.look_at(target, Vector3.UP)
+	camera_ready = true

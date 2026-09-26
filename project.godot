@@ -13,6 +13,7 @@ window/size/viewport_height=720
 window/size/window_width_override=1280
 window/size/window_height_override=720
 window/stretch/mode="canvas_items"
+window/stretch/aspect="expand"
 window/handheld/orientation=0
 
 [rendering]
@@ -28,4 +29,4 @@ common/physics_ticks_per_second=60
 pointing/emulate_mouse_from_touch=true
 
 [application_custom]
-prototype_version="0.3.0"
+prototype_version="0.3.4"
