@@ -141,7 +141,7 @@ func _ready() -> void:
 
 func _physics_process(delta: float) -> void:
 	var target := car.global_position + Vector3(0, 1.3, 0)
-	var desired: Vector3 = target + car.global_basis.z * (7.5 + absf(car.speed) * 0.035) + Vector3(0, 3.8, 0)
+	var desired: Vector3 = target + car.global_basis.z * (5.3 + absf(car.speed) * 0.035) + Vector3(0, 2.6, 0)
 	var query := PhysicsRayQueryParameters3D.create(target, desired)
 	query.exclude = [car.get_rid()]
 	var hit := get_world_3d().direct_space_state.intersect_ray(query)

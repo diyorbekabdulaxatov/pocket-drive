@@ -1,4 +1,4 @@
-# Pocket Drive — Android prototype 0.2.1
+# Pocket Drive — Android prototype 0.2.2
 
 A small offline driving prototype made in Godot 4.7.2 with GDScript. The environment uses original simple geometry. The car uses the supplied Porsche 911 Carrera 4S model by Karol Miklas, adapted under CC BY-SA 4.0. See `assets/porsche/ATTRIBUTION.md` and the in-game pause menu credits.
 
@@ -38,3 +38,5 @@ Version 0.1.1 fixes off-screen driving pads and adds control-boundary checks at 
 Version 0.2.0 replaces the placeholder car with an optimized Porsche (83,711 triangles), animated wheels, corrected ground clearance, and model credits. Handling and touch controls are retained. Android visual appearance and frame rate require on-device testing.
 
 Version 0.2.1 corrects baked front-wheel yaw and hub symmetry, keeps brake calipers stationary during wheel spin, and adds geometry-based wheel regression checks. Missing wheels now log an error and are skipped safely in release builds. The HUD subtitle is version-neutral. Handling, touch controls and the world are unchanged.
+
+Version 0.2.2 brings the chase camera closer (5.3 m instead of 7.5 m behind the car) and lowers its height above the follow target from 3.8 m to 2.6 m. Camera smoothing, field of view, collision avoidance and driving behavior are unchanged.
