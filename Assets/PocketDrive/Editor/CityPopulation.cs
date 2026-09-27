@@ -15,7 +15,6 @@ namespace PocketDrive.Editor
     public static class CityPopulation
     {
         public const string CharactersFolder = "Assets/PocketDrive/Characters";
-        const string ControllerPath = CharactersFolder + "/Walker.controller";
 
         public static void Add(Transform player)
         {
@@ -32,7 +31,10 @@ namespace PocketDrive.Editor
             pedestrians.player = player;
             var pedestrianSettings = new SerializedObject(pedestrians);
             pedestrianSettings.FindProperty("traffic").objectReferenceValue = traffic;
-            pedestrianSettings.FindProperty("walkerTemplate").objectReferenceValue = WalkerTemplate(pedestrians.transform);
+            var templates = WalkerTemplates(pedestrians.transform);
+            var list = pedestrianSettings.FindProperty("walkerTemplates");
+            list.arraySize = templates.Length;
+            for (int i = 0; i < templates.Length; i++) list.GetArrayElementAtIndex(i).objectReferenceValue = templates[i];
             pedestrianSettings.ApplyModifiedPropertiesWithoutUndo();
         }
 
@@ -58,57 +60,97 @@ namespace PocketDrive.Editor
             return car;
         }
 
-        // Uses the first rigged character model in CharactersFolder and the first clip whose name contains "walk".
-        static GameObject WalkerTemplate(Transform parent)
+        // One template per character model in CharactersFolder (glTF/GLB via glTFast, or FBX such as Mixamo).
+        // Each uses a clip whose name contains "walk", from its own file or from a separate walk-only FBX.
+        static GameObject[] WalkerTemplates(Transform parent)
         {
-            if (!Directory.Exists(CharactersFolder)) return null;
-            var models = AssetDatabase.FindAssets("t:Model", new[] { CharactersFolder })
-                .Select(AssetDatabase.GUIDToAssetPath).ToArray();
-            if (models.Length == 0) return null;
+            if (!Directory.Exists(CharactersFolder)) return Array.Empty<GameObject>();
+            var models = AssetDatabase.FindAssets("t:GameObject", new[] { CharactersFolder })
+                .Select(AssetDatabase.GUIDToAssetPath)
+                .Where(p => p.EndsWith(".glb") || p.EndsWith(".gltf") || p.EndsWith(".fbx", StringComparison.OrdinalIgnoreCase))
+                .Distinct().OrderBy(p => p).ToArray();
+            foreach (string path in models.Where(p => p.EndsWith(".fbx", StringComparison.OrdinalIgnoreCase)))
+                PrepareFbx(path);
 
-            foreach (string path in models)
+            AnimationClip sharedWalk = models.Where(IsWalkOnly).SelectMany(WalkClips).FirstOrDefault();
+            var templates = new System.Collections.Generic.List<GameObject>();
+            foreach (string path in models.Where(p => !IsWalkOnly(p)))
             {
-                var importer = (ModelImporter)AssetImporter.GetAtPath(path);
-                bool isWalk = Path.GetFileName(path).ToLowerInvariant().Contains("walk");
-                bool changed = importer.animationType != ModelImporterAnimationType.Human;
-                importer.animationType = ModelImporterAnimationType.Human;
-                if (isWalk)
-                {
-                    var clips = importer.defaultClipAnimations;
-                    foreach (var c in clips) { c.loopTime = true; c.lockRootPositionXZ = true; }
-                    importer.clipAnimations = clips;
-                    changed = true;
-                }
-                if (changed) importer.SaveAndReimport();
+                var source = AssetDatabase.LoadAssetAtPath<GameObject>(path);
+                if (source == null) continue;
+                var walk = WalkClips(path).FirstOrDefault() ?? sharedWalk;
+                string name = Path.GetFileNameWithoutExtension(path);
+
+                var walker = new GameObject($"Pedestrian template ({name})");
+                walker.transform.SetParent(parent, false);
+                var model = (GameObject)PrefabUtility.InstantiatePrefab(source, walker.transform);
+                model.transform.localPosition = Vector3.zero;
+                model.transform.localRotation = Quaternion.identity;
+                foreach (var collider in model.GetComponentsInChildren<Collider>()) Object.DestroyImmediate(collider);
+                FitHeight(walker.transform, model, 1.75f);
+
+                var animator = model.GetComponentInChildren<Animator>() ?? model.AddComponent<Animator>();
+                animator.applyRootMotion = false;
+                animator.cullingMode = AnimatorCullingMode.CullCompletely;
+                if (walk != null)
+                    animator.runtimeAnimatorController = AnimatorController.CreateAnimatorControllerAtPathWithClip(
+                        $"{CharactersFolder}/{name}_Walk.controller", walk);
+
+                var capsule = walker.AddComponent<CapsuleCollider>();
+                capsule.height = 1.8f;
+                capsule.radius = .3f;
+                capsule.center = new Vector3(0, .9f, 0);
+                walker.AddComponent<Rigidbody>().isKinematic = true;
+                walker.SetActive(false);
+                templates.Add(walker);
             }
+            return templates.ToArray();
+        }
 
-            var walk = models
-                .SelectMany(p => AssetDatabase.LoadAllAssetsAtPath(p).OfType<AnimationClip>())
-                .FirstOrDefault(c => !c.name.StartsWith("__preview") && c.name.ToLowerInvariant().Contains("walk")
-                                     || !c.name.StartsWith("__preview") && c.name.ToLowerInvariant().Contains("mixamo"));
-            string characterPath = models.FirstOrDefault(p => !Path.GetFileName(p).ToLowerInvariant().Contains("walk")) ?? models[0];
-            var character = AssetDatabase.LoadAssetAtPath<GameObject>(characterPath);
-            if (character == null) return null;
+        // Plain "Walk" beats variants such as "Walk_Carry".
+        static int WalkRank(string clip)
+        {
+            string n = clip.ToLowerInvariant();
+            string last = n.Substring(n.LastIndexOf('|') + 1);
+            return last == "walk" ? 0 : n.Contains("walk") && !n.Contains("carry") ? 1 : n.Contains("walk") ? 2 : 3;
+        }
 
-            var walker = new GameObject("Pedestrian template");
-            walker.transform.SetParent(parent, false);
-            var model = (GameObject)PrefabUtility.InstantiatePrefab(character, walker.transform);
-            model.transform.localPosition = Vector3.zero;
-            var animator = model.GetComponent<Animator>() ?? model.AddComponent<Animator>();
-            animator.applyRootMotion = false;
-            animator.cullingMode = AnimatorCullingMode.CullCompletely;
-            if (walk != null)
+        static bool IsWalkOnly(string path) =>
+            path.EndsWith(".fbx", StringComparison.OrdinalIgnoreCase) && Path.GetFileName(path).ToLowerInvariant().Contains("walk");
+
+        static System.Collections.Generic.IEnumerable<AnimationClip> WalkClips(string path) =>
+            AssetDatabase.LoadAllAssetsAtPath(path).OfType<AnimationClip>()
+                .Where(c => !c.name.StartsWith("__preview"))
+                .OrderBy(c => WalkRank(c.name))
+                .Where(c => c.name.ToLowerInvariant().Contains("walk") || IsWalkOnly(path));
+
+        // Mixamo FBX: humanoid rig; the walk clip loops in place.
+        static void PrepareFbx(string path)
+        {
+            var importer = (ModelImporter)AssetImporter.GetAtPath(path);
+            bool changed = importer.animationType != ModelImporterAnimationType.Human;
+            importer.animationType = ModelImporterAnimationType.Human;
+            if (IsWalkOnly(path))
             {
-                var controller = AnimatorController.CreateAnimatorControllerAtPathWithClip(ControllerPath, walk);
-                animator.runtimeAnimatorController = controller;
+                var clips = importer.defaultClipAnimations;
+                foreach (var c in clips) { c.loopTime = true; c.lockRootPositionXZ = true; }
+                importer.clipAnimations = clips;
+                changed = true;
             }
-            var capsule = walker.AddComponent<CapsuleCollider>();
-            capsule.height = 1.8f;
-            capsule.radius = .3f;
-            capsule.center = new Vector3(0, .9f, 0);
-            walker.AddComponent<Rigidbody>().isKinematic = true;
-            walker.SetActive(false);
-            return walker;
+            if (changed) importer.SaveAndReimport();
+        }
+
+        // Scales the model so its height matches a real person and its feet sit at the template's origin.
+        static void FitHeight(Transform root, GameObject model, float height)
+        {
+            var renderers = model.GetComponentsInChildren<Renderer>();
+            if (renderers.Length == 0) return;
+            Bounds bounds = renderers[0].bounds;
+            foreach (var r in renderers) bounds.Encapsulate(r.bounds);
+            if (bounds.size.y > .01f) model.transform.localScale *= height / bounds.size.y;
+            bounds = renderers[0].bounds;
+            foreach (var r in renderers) bounds.Encapsulate(r.bounds);
+            model.transform.position += new Vector3(root.position.x - bounds.center.x, root.position.y - bounds.min.y, root.position.z - bounds.center.z);
         }
 
         // Headless check: traffic drives the grid for 60 simulated seconds without leaving the roads or overlapping.
@@ -156,23 +198,46 @@ namespace PocketDrive.Editor
             Debug.Log($"POCKET_DRIVE_TRAFFIC_CHECKS_OK: {cars.Length} cars, {moving} drove over 150 m in 60 s, stayed on roads, no overlaps");
         }
 
-        // Renders traffic after 20 simulated seconds, looking down Palm Boulevard from above the player.
+        // Renders traffic and pedestrians after 20 simulated seconds.
         public static void Preview()
         {
             EditorSceneManager.OpenScene(CoastalCityBuilder.ScenePath);
             var traffic = Object.FindAnyObjectByType<TrafficSystem>(FindObjectsInactive.Include);
+            var people = Object.FindAnyObjectByType<PedestrianSystem>(FindObjectsInactive.Include);
             const BindingFlags flags = BindingFlags.Instance | BindingFlags.NonPublic;
             typeof(TrafficSystem).GetMethod("Start", flags).Invoke(traffic, null);
-            var tick = typeof(TrafficSystem).GetMethod("FixedUpdate", flags);
-            for (int i = 0; i < 1000; i++) tick.Invoke(traffic, null);
+            typeof(PedestrianSystem).GetMethod("Start", flags).Invoke(people, null);
+            Physics.simulationMode = SimulationMode.Script;
+            for (int i = 0; i < 1000; i++)
+            {
+                typeof(TrafficSystem).GetMethod("FixedUpdate", flags).Invoke(traffic, null);
+                if (people.enabled) typeof(PedestrianSystem).GetMethod("FixedUpdate", flags).Invoke(people, null);
+                Physics.Simulate(.02f);
+            }
             Physics.SyncTransforms();
+            // Edit mode does not run animators, so pose each walker mid-stride.
+            foreach (var animator in people.GetComponentsInChildren<Animator>())
+            {
+                var controller = animator.runtimeAnimatorController;
+                if (controller != null && controller.animationClips.Length > 0)
+                    controller.animationClips[0].SampleAnimation(animator.gameObject, UnityEngine.Random.Range(0f, .8f));
+            }
             var cam = Camera.main;
             cam.GetComponent<FollowCamera>().enabled = false;
-            var nearest = traffic.GetComponentsInChildren<Rigidbody>()
+            Transform Nearest(Component system) => system.GetComponentsInChildren<Rigidbody>()
                 .Where(b => b.gameObject.activeInHierarchy)
-                .OrderBy(b => Vector3.Distance(b.position, traffic.player.position)).First();
-            cam.transform.position = nearest.position + new Vector3(9, 5, -14);
-            cam.transform.LookAt(nearest.position + Vector3.up);
+                .OrderBy(b => Vector3.Distance(b.position, traffic.player.position)).FirstOrDefault()?.transform;
+            var car = Nearest(traffic);
+            if (car != null) Capture(cam, car.position + new Vector3(9, 5, -14), car.position + Vector3.up, "outputs/coastal-city-traffic.png");
+            var walker = people.enabled ? Nearest(people) : null;
+            if (walker != null) Capture(cam, walker.position + walker.forward * 5 + new Vector3(2, 1.6f, 0), walker.position + Vector3.up, "outputs/coastal-city-people.png");
+            Debug.Log("POCKET_DRIVE_TRAFFIC_PREVIEW_OK");
+        }
+
+        static void Capture(Camera cam, Vector3 position, Vector3 lookAt, string path)
+        {
+            cam.transform.position = position;
+            cam.transform.LookAt(lookAt);
             var rt = new RenderTexture(1600, 900, 24);
             cam.targetTexture = rt;
             cam.Render();
@@ -180,12 +245,49 @@ namespace PocketDrive.Editor
             RenderTexture.active = rt;
             var image = new Texture2D(1600, 900, TextureFormat.RGB24, false);
             image.ReadPixels(new Rect(0, 0, 1600, 900), 0, 0);
-            File.WriteAllBytes("outputs/coastal-city-traffic.png", image.EncodeToPNG());
+            File.WriteAllBytes(path, image.EncodeToPNG());
             cam.targetTexture = null;
             RenderTexture.active = null;
             Object.DestroyImmediate(image);
             Object.DestroyImmediate(rt);
-            Debug.Log("POCKET_DRIVE_TRAFFIC_PREVIEW_OK");
+        }
+
+        // Headless check: pedestrians keep walking for 60 simulated seconds on pavements and crosswalks.
+        public static void PedestrianChecks()
+        {
+            EditorSceneManager.OpenScene(CoastalCityBuilder.ScenePath);
+            var traffic = Object.FindAnyObjectByType<TrafficSystem>(FindObjectsInactive.Include);
+            var people = Object.FindAnyObjectByType<PedestrianSystem>(FindObjectsInactive.Include);
+            Require(people != null, "City has no pedestrian system");
+            const BindingFlags flags = BindingFlags.Instance | BindingFlags.NonPublic;
+            typeof(TrafficSystem).GetMethod("Start", flags).Invoke(traffic, null);
+            typeof(PedestrianSystem).GetMethod("Start", flags).Invoke(people, null);
+            Require(people.enabled && people.ActiveWalkers > 0, "Pedestrians did not start (no character templates?)");
+            var trafficTick = typeof(TrafficSystem).GetMethod("FixedUpdate", flags);
+            var walkTick = typeof(PedestrianSystem).GetMethod("FixedUpdate", flags);
+            var walkers = people.GetComponentsInChildren<Rigidbody>().Where(b => b.gameObject.activeInHierarchy).ToArray();
+            Require(walkers.All(w => w.GetComponentInChildren<Animator>()?.runtimeAnimatorController != null), "A walker has no walk animation");
+            float[] travelled = new float[walkers.Length];
+            var previousMode = Physics.simulationMode;
+            Physics.simulationMode = SimulationMode.Script;
+            for (int step = 0; step < 3000; step++)
+            {
+                var before = walkers.Select(w => w.position).ToArray();
+                trafficTick.Invoke(traffic, null);
+                walkTick.Invoke(people, null);
+                Physics.Simulate(.02f);
+                for (int i = 0; i < walkers.Length; i++)
+                {
+                    Vector3 p = walkers[i].position;
+                    float moved = Vector3.Distance(before[i], p);
+                    if (moved < 1f) travelled[i] += moved;
+                    Require(p.y > -.1f && p.y < .5f, $"{walkers[i].name} is at height {p.y}");
+                }
+            }
+            Physics.simulationMode = previousMode;
+            int walking = travelled.Count(d => d > 30f);
+            Require(walking >= walkers.Length * 3 / 4, $"Only {walking} of {walkers.Length} pedestrians kept walking");
+            Debug.Log($"POCKET_DRIVE_PEDESTRIAN_CHECKS_OK: {walkers.Length} walkers, {walking} walked over 30 m in 60 s");
         }
 
         static bool OnRoad(Vector3 p)

@@ -8,7 +8,7 @@ namespace PocketDrive
     // Each walker has a kinematic Rigidbody so traffic cars brake for them.
     public sealed class PedestrianSystem : MonoBehaviour
     {
-        [SerializeField] GameObject walkerTemplate;
+        [SerializeField] GameObject[] walkerTemplates;
         [SerializeField] TrafficSystem traffic;
         [SerializeField] int walkerCount = 24;
         [SerializeField] float walkSpeed = 1.35f;
@@ -50,11 +50,11 @@ namespace PocketDrive
                 var car = FindAnyObjectByType<ArcadeCar>();
                 if (car != null) player = car.transform;
             }
-            if (walkerTemplate == null || player == null) { enabled = false; return; }
-            walkerTemplate.SetActive(false);
+            if (walkerTemplates == null || walkerTemplates.Length == 0 || player == null) { enabled = false; return; }
+            foreach (var template in walkerTemplates) template.SetActive(false);
             for (int i = 0; i < walkerCount; i++)
             {
-                var instance = Instantiate(walkerTemplate, transform);
+                var instance = Instantiate(walkerTemplates[i % walkerTemplates.Length], transform);
                 instance.name = $"Pedestrian {i + 1}";
                 instance.SetActive(true);
                 var body = instance.GetComponent<Rigidbody>();
