@@ -145,6 +145,22 @@ Exit: someone outside the team understands and enjoys a level without help, at a
 27. Remote announcement cards, daily challenges, cloud save if players ask for it.
 28. Subscription, once the content schedule can support it.
 
+## 7A. Agreed order of remaining work
+
+Agreed with Diyorbek on 27 September 2026. This list is the working order; section 7 keeps the history of earlier steps.
+
+1. **Phone test** of the current Coastal City build (traffic, people, Porsche). Needs Diyorbek's phone.
+2. **Parking challenge:** park in a marked bay against the clock, with stars. *(Done, first version: random target bay among 106, 60 s limit, stars from time and hits, retry and free-drive buttons. Needs phone playtesting for difficulty.)*
+3. **Time-trial challenge:** checkpoint races on the streets and freeway.
+4. **Car details:** wheels that spin and steer, engine and crash sounds, visible traffic-light colours.
+5. **Realistic buildings and trees:** free Asset Store packs added to Diyorbek's Unity account.
+6. **Realistic people:** Mixamo characters from Diyorbek's Adobe account, replacing the placeholders.
+7. **Decisions:** Input System package; stay on Unity 6000.6.3f1 or move to the LTS release.
+8. **Game screens:** menu, level select, garage, results, settings, local saves.
+9. **Coins and garage:** earn coins, unlock 3 to 5 cars; then 20 to 30 levels.
+10. **Release:** final app ID and icon, Play Store listing, privacy policy, signed build, closed testing.
+11. **After launch:** purchases, optional rewarded ads, daily prizes, notifications, subscription, login and cloud save.
+
 ## 8. Open questions for Diyorbek
 
 1. Is parking plus time-trial the right game mode? (Default until you say otherwise.)

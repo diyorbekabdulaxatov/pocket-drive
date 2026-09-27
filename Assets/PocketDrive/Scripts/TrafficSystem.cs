@@ -34,7 +34,7 @@ namespace PocketDrive
 
         [Header("Traffic lights")]
         [SerializeField] float greenTime = 12f;
-        [SerializeField] float clearanceTime = 3f;
+        [SerializeField] float clearanceTime = 5f;
 
         public Transform player;
 
@@ -54,9 +54,13 @@ namespace PocketDrive
             public int direction;
             public int stopIndex; // path index of the stop line before the next intersection
             public int turnEnd;   // path indices below this are the curve through an intersection
+            public Vector2Int? inside; // intersection the car is currently crossing
+            public int entryDirection;
         }
 
         readonly List<Car> cars = new();
+        // Cars crossing each intersection. A car only enters when every car inside came from the same direction.
+        readonly Dictionary<Vector2Int, List<Car>> crossing = new();
         readonly RaycastHit[] hits = new RaycastHit[8];
         float clock; // advances with physics, so lights also cycle when the simulation is stepped by hand
 
@@ -113,7 +117,8 @@ namespace PocketDrive
             clock += dt;
             foreach (var car in cars)
             {
-                if ((car.transform.position - player.position).sqrMagnitude > despawnRadius * despawnRadius)
+                // A car with no route (no free spawn spot was found yet) keeps trying to respawn.
+                if (car.path.Count == 0 || (car.transform.position - player.position).sqrMagnitude > despawnRadius * despawnRadius)
                 {
                     Respawn(car, false);
                     continue;
@@ -136,10 +141,11 @@ namespace PocketDrive
             {
                 float toStop = Distance(car, position, car.stopIndex);
                 desired = Mathf.Min(desired, Mathf.Sqrt(turnSpeed * turnSpeed + 2f * braking * .6f * toStop));
-                if (!IsGreen(car.to, car.direction)) desired = Mathf.Min(desired, StoppingSpeed(toStop));
+                if (!IsGreen(car.to, car.direction) || Blocked(car)) desired = Mathf.Min(desired, StoppingSpeed(toStop));
             }
             desired = Mathf.Min(desired, StoppingSpeed(ClearDistance(car, position, forward) - 6f));
 
+            if (car.inside.HasValue && car.pathIndex >= car.turnEnd) Leave(car);
             float rate = desired < car.speed ? braking : acceleration;
             car.speed = Mathf.MoveTowards(car.speed, desired, rate * dt);
 
@@ -152,6 +158,11 @@ namespace PocketDrive
                 if (remaining > step) { position = Vector3.MoveTowards(position, next, step); break; }
                 position = next;
                 step -= remaining;
+                if (car.pathIndex == car.path.Count - 1 && Blocked(car))
+                {
+                    car.speed = 0; // hold at the stop line until the intersection is clear
+                    break;
+                }
                 car.pathIndex++;
                 if (car.pathIndex >= car.path.Count) PlanNextLeg(car);
             }
@@ -159,6 +170,28 @@ namespace PocketDrive
             car.body.MovePosition(position);
             if (forward.sqrMagnitude > .01f)
                 car.body.MoveRotation(Quaternion.Slerp(car.body.rotation, Quaternion.LookRotation(forward), 8f * dt));
+        }
+
+        bool Blocked(Car car)
+        {
+            if (!crossing.TryGetValue(car.to, out var inside)) return false;
+            foreach (var other in inside)
+                if (other != car && other.entryDirection != car.direction) return true;
+            return false;
+        }
+
+        void Enter(Car car, Vector2Int node)
+        {
+            if (!crossing.TryGetValue(node, out var inside)) crossing[node] = inside = new List<Car>();
+            inside.Add(car);
+            car.inside = node;
+            car.entryDirection = car.direction;
+        }
+
+        void Leave(Car car)
+        {
+            if (car.inside.HasValue && crossing.TryGetValue(car.inside.Value, out var inside)) inside.Remove(car);
+            car.inside = null;
         }
 
         float StoppingSpeed(float distance) => distance <= 0 ? 0 : Mathf.Sqrt(2f * braking * .6f * distance);
@@ -182,6 +215,17 @@ namespace PocketDrive
             Vector3 origin = position + Vector3.up * .8f;
             int count = Physics.SphereCastNonAlloc(origin, 1.1f, forward, hits, look, ~0, QueryTriggerInteraction.Ignore);
             float nearest = float.MaxValue;
+            // Other traffic cars and the player, checked directly so cars in curves and inside intersections are seen too.
+            void Consider(Vector3 other)
+            {
+                Vector3 d = Flat(other - position);
+                float ahead = Vector3.Dot(d, forward);
+                if (ahead <= 0 || ahead > look + 4f) return;
+                float side = Mathf.Abs(Vector3.Cross(forward, d).y);
+                if (side < 2.6f) nearest = Mathf.Min(nearest, ahead - 2.4f); // roughly the other car's half length
+            }
+            foreach (var other in cars) if (other != car && other.path.Count > 0) Consider(other.body.position);
+            Consider(player.position);
             for (int i = 0; i < count; i++)
             {
                 var hit = hits[i];
@@ -225,6 +269,7 @@ namespace PocketDrive
         // Called when a car reaches the end of its path: turn through the intersection, then drive the next block.
         void PlanNextLeg(Car car)
         {
+            Enter(car, car.to);
             int next = ChooseTurn(car.to, car.direction);
             Vector3 exit = LaneEnd(car.to, car.direction);
             Vector3 entry = LaneStart(car.to, next);
@@ -249,15 +294,17 @@ namespace PocketDrive
         int ChooseTurn(Vector2Int node, int direction)
         {
             int straight = direction, right = (direction + 1) % 4, left = (direction + 3) % 4;
+            // No left turns unless there is no other way: they would cut across oncoming traffic on the same green.
             var options = new List<int>(3);
-            foreach (int d in new[] { straight, straight, right, left })
+            foreach (int d in new[] { straight, straight, right })
                 if (InGrid(node + Step(d))) options.Add(d);
+            if (options.Count == 0 && InGrid(node + Step(left))) options.Add(left);
             return options.Count > 0 ? options[Random.Range(0, options.Count)] : (direction + 2) % 4;
         }
 
         void Respawn(Car car, bool initial)
         {
-            for (int attempt = 0; attempt < 40; attempt++)
+            for (int attempt = 0; attempt < 80; attempt++)
             {
                 var from = new Vector2Int(Random.Range(0, gridCount), Random.Range(0, gridCount));
                 int direction = Random.Range(0, 4);
@@ -270,6 +317,7 @@ namespace PocketDrive
                 if (!initial && IsVisible(spot)) continue;
                 if (Occupied(spot, car) || Vector3.Distance(Flat(spot), Flat(player.position)) < minSpawnDistance) continue;
 
+                Leave(car);
                 car.from = from;
                 car.to = to;
                 car.direction = direction;

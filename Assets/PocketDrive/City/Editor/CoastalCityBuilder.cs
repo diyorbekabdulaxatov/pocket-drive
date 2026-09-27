@@ -141,6 +141,7 @@ namespace PocketDrive.Editor
             var so=new SerializedObject(follow);so.FindProperty("height").floatValue=3.4f;so.FindProperty("distance").floatValue=8;so.ApplyModifiedPropertiesWithoutUndo();follow.Snap();
             new GameObject("Coastal City HUD").AddComponent<CoastalCityHud>().car=car;
             CityPopulation.Add(carCopy.transform);
+            ChallengeSetup.AddParking(car,follow);
             Lighting();
             EditorSceneManager.SaveScene(temporary,ScenePath);
             EditorBuildSettings.scenes=new[]{new EditorBuildSettingsScene(ScenePath,true),new EditorBuildSettingsScene(ProjectSetup.ScenePath,true)};
@@ -327,7 +328,7 @@ namespace PocketDrive.Editor
         // Surface car park at the south end of the north-south boulevard: four rows of 2.7 x 5.5 m bays.
         static void ParkingLot()
         {
-            const float cz=-370,halfWidth=40,halfDepth=25,bay=2.7f,depth=5.5f;
+            const float cz=ChallengeSetup.LotCentreZ,halfWidth=ChallengeSetup.LotHalfWidth,halfDepth=ChallengeSetup.LotHalfDepth,bay=ChallengeSetup.BayWidth,depth=ChallengeSetup.BayDepth;
             Box("parking",V(0,.03f,cz),V(halfWidth*2,.06f,halfDepth*2),true);
             Box("asphalt",V(0,.028f,cz+halfDepth+3.75f),V(12,.056f,7.5f),true);
             foreach(int side in new[]{-1,1})

@@ -236,7 +236,7 @@ namespace PocketDrive.Editor
             Debug.Log("POCKET_DRIVE_TRAFFIC_PREVIEW_OK");
         }
 
-        static void Capture(Camera cam, Vector3 position, Vector3 lookAt, string path)
+        internal static void Capture(Camera cam, Vector3 position, Vector3 lookAt, string path)
         {
             cam.transform.position = position;
             cam.transform.LookAt(lookAt);
