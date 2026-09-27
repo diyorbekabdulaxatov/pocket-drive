@@ -33,7 +33,8 @@ namespace PocketDrive.Editor
             public void Quad(Vector3 a,Vector3 b,Vector3 c,Vector3 d,float u=1,float v=1)
             {
                 int n=vertices.Count; vertices.AddRange(new[]{a,b,c,d});
-                uv.AddRange(new[]{new Vector2(0,0),new Vector2(u,0),new Vector2(u,v),new Vector2(0,v)});
+                float tile=RealisticLook.TileSize(material);
+                uv.AddRange(tile>0?RealisticLook.QuadUVs(a,b,c,d,tile):new[]{new Vector2(0,0),new Vector2(u,0),new Vector2(u,v),new Vector2(0,v)});
                 triangles.AddRange(new[]{n,n+1,n+2,n,n+2,n+3});
             }
         }
@@ -72,7 +73,7 @@ namespace PocketDrive.Editor
             string path=$"{Root}/{name}.mat";var m=AssetDatabase.LoadAssetAtPath<Material>(path);
             if(m==null){m=new Material(PocketDrive.Editor.RenderPipelineSetup.Lit);AssetDatabase.CreateAsset(m,path);}
             m.color=color;PocketDrive.Editor.RenderPipelineSetup.SetSmoothness(m,smooth);m.enableInstancing=true;
-            if(texture||facade)
+            if((texture||facade)&&!RealisticLook.HasSurface(name))
             {
                 var tex=new Texture2D(128,128,TextureFormat.RGB24,true);var pixels=new Color[128*128];
                 for(int y=0;y<128;y++)for(int x=0;x<128;x++)
@@ -91,6 +92,7 @@ namespace PocketDrive.Editor
                 AssetDatabase.ImportAsset(tp);var imp=(TextureImporter)AssetImporter.GetAtPath(tp);imp.wrapMode=TextureWrapMode.Repeat;imp.maxTextureSize=128;imp.mipmapEnabled=true;imp.SaveAndReimport();
                 m.mainTexture=AssetDatabase.LoadAssetAtPath<Texture2D>(tp);
             }
+            RealisticLook.ApplySurface(m,name);
             EditorUtility.SetDirty(m);mats[name]=m;
         }
         [MenuItem("Pocket Drive/City/Create or Rebuild Coastal City")]
@@ -121,10 +123,11 @@ namespace PocketDrive.Editor
             Material("grass",new Color(.37f,.40f,.19f),.05f,true);Material("water",new Color(.18f,.46f,.53f),.65f);
             Material("mountain",new Color(.50f,.48f,.39f));Material("sign",new Color(.045f,.25f,.17f));
             Material("carpaint",new Color(.63f,.19f,.065f),.7f);
+            Material("parking",Color.white,.15f,true);
             Box("sand",V(0,-1,0),V(1250,2,1250),true,80);
             Box("water",V(-1250,-1.1f,0),V(1270,1,2600),false,200);
-            Streets();Buildings();Freeway();Dressing();Mountains();Flush();
-            carCopy.name="Player Car";carCopy.transform.position=V(5,.75f,-280);carCopy.transform.rotation=Quaternion.identity;
+            Streets();Buildings();Freeway();Dressing();ParkingLot();Mountains();Flush();
+            carCopy.name="Player Car";carCopy.transform.position=V(5,.42f,-280);carCopy.transform.rotation=Quaternion.identity;
             var car=carCopy.GetComponent<ArcadeCar>();
             string tuningPath=Root+"/CoastalCarTuning.asset";
             var cityTuning=AssetDatabase.LoadAssetAtPath<CarTuning>(tuningPath);
@@ -320,6 +323,34 @@ namespace PocketDrive.Editor
             var go=new GameObject("Palm trunk collision");go.transform.SetParent(colliders);go.transform.position=origin+Vector3.up*h/2;var capsule=go.AddComponent<CapsuleCollider>();capsule.radius=.32f;capsule.height=h;
             Box("concrete",origin+V(0,.18f,0),V(2,.36f,2));
         }
+        // Surface car park at the south end of the north-south boulevard: four rows of 2.7 x 5.5 m bays.
+        static void ParkingLot()
+        {
+            const float cz=-370,halfWidth=40,halfDepth=25,bay=2.7f,depth=5.5f;
+            Box("parking",V(0,.03f,cz),V(halfWidth*2,.06f,halfDepth*2),true);
+            Box("asphalt",V(0,.028f,cz+halfDepth+3.75f),V(12,.056f,7.5f),true);
+            foreach(int side in new[]{-1,1})
+            {
+                Box("concrete",V(side*(halfWidth+.15f),.12f,cz),V(.3f,.24f,halfDepth*2+.6f),true);
+                Box("concrete",V(side*(halfWidth+6)/2,.12f,cz+halfDepth+.15f),V(halfWidth-6,.24f,.3f),true);
+            }
+            Box("concrete",V(0,.12f,cz-halfDepth-.15f),V(halfWidth*2+.6f,.24f,.3f),true);
+            float[] rows={cz+halfDepth-depth/2,cz+depth/2,cz-depth/2,cz-halfDepth+depth/2};
+            foreach(float row in rows)
+                for(int i=0;i<=28;i++)
+                {
+                    float x=-37.8f+i*bay;
+                    if(row==rows[0]&&Mathf.Abs(x)<7)continue; // keep the entrance clear
+                    Box("white",V(x,.07f,row),V(.12f,.012f,depth));
+                }
+            Box("white",V(0,.07f,cz),V(75.6f,.012f,.12f));
+            foreach(int sx in new[]{-1,1})foreach(float z in new[]{cz+halfDepth-1,cz-halfDepth+1})
+            {
+                Vector3 p=V(sx*(halfWidth+1),.1f,z);Cylinder("metal",p,p+Vector3.up*8,.12f,.09f);
+                Beam("metal",p+Vector3.up*8,p+V(-sx*2.5f,8,0),.12f,.12f);Box("white",p+V(-sx*2.5f,7.9f,0),V(1f,.15f,.45f));
+            }
+            Sign(V(9,3.2f,cz+halfDepth+6),"PARKING",false,true);
+        }
         static void Dressing()
         {
             foreach(float road in new[]{-300f,-150f,0f,150f,300f})
@@ -350,12 +381,12 @@ namespace PocketDrive.Editor
             Box("concrete",V(-530,.04f,0),V(14,.08f,950),true);
             for(int z=-420;z<=420;z+=35)Palm(V(-518,.08f,z),R(11,16));
         }
-        static void Sign(Vector3 p,string label,bool large)
+        static void Sign(Vector3 p,string label,bool large,bool facesNorth=false)
         {
             float width=large?18:12,height=large?4:2;
             Box("sign",p,V(width,height,.2f));
             foreach(int side in new[]{-1,1})Cylinder("metal",V(p.x+side*width*.45f,0,p.z),V(p.x+side*width*.45f,p.y,p.z),.16f,.16f);
-            var text=new GameObject(label.Replace('\n',' '));text.transform.position=p+V(0,0,-.13f);text.transform.rotation=Quaternion.identity;
+            var text=new GameObject(label.Replace('\n',' '));text.transform.position=p+V(0,0,facesNorth?.13f:-.13f);text.transform.rotation=facesNorth?Quaternion.Euler(0,180,0):Quaternion.identity;
             var tm=text.AddComponent<TextMesh>();tm.text=label;tm.anchor=TextAnchor.MiddleCenter;tm.alignment=TextAlignment.Center;tm.fontSize=64;tm.characterSize=large?.26f:.19f;tm.color=new Color(.93f,.93f,.82f);
         }
         static void Mountains()
@@ -390,6 +421,7 @@ namespace PocketDrive.Editor
         }
         static void UpgradeCarVisual(Transform parent)
         {
+            if(RealisticLook.AttachPorsche(parent))return;
             // Only this scene's cloned visual children are replaced.
             for(int i=parent.childCount-1;i>=0;i--)Object.DestroyImmediate(parent.GetChild(i).gameObject);
             GameObject Part(string name,Vector3 p,Vector3 scale,string mat,PrimitiveType type=PrimitiveType.Cube)
@@ -429,12 +461,15 @@ namespace PocketDrive.Editor
             Capture(cam,cam.transform.position,cam.transform.position+cam.transform.forward*100,"outputs/coastal-city-driving.png");
             Capture(cam,V(5,4,-282),V(2,16,100),"outputs/coastal-city-street.png");
             Capture(cam,V(-520,220,-560),V(15,25,20),"outputs/coastal-city-overview.png");
+            Capture(cam,V(30,14,-330),V(0,0,-372),"outputs/coastal-city-parking.png");
+            var car=Object.FindAnyObjectByType<ArcadeCar>().transform;
+            Capture(cam,car.position+V(4.5f,1.6f,5.5f),car.position+V(0,.4f,0),"outputs/coastal-city-car.png");
             Debug.Log("COASTAL_CITY_PREVIEW_OK");
         }
         static void Capture(Camera cam,Vector3 position,Vector3 look,string path)
         {
             cam.transform.position=position;cam.transform.LookAt(look);cam.fieldOfView=60;
-            var rt=new RenderTexture(1600,900,24);cam.targetTexture=rt;cam.Render();RenderTexture.active=rt;
+            var rt=new RenderTexture(1600,900,24);cam.targetTexture=rt;cam.Render();cam.Render();RenderTexture.active=rt;// first render can miss textures still loading
             var image=new Texture2D(1600,900,TextureFormat.RGB24,false);image.ReadPixels(new Rect(0,0,1600,900),0,0);image.Apply();File.WriteAllBytes(path,image.EncodeToPNG());
             cam.targetTexture=null;RenderTexture.active=null;Object.DestroyImmediate(image);Object.DestroyImmediate(rt);
         }

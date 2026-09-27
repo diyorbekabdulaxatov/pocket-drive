@@ -52,3 +52,8 @@ Commit Unity `.meta` files with assets. Generated caches, local settings, APKs, 
 Implemented: Unity project, Android configuration, basic car movement, chase camera, driving pad/obstacles, reset, keyboard/touch prototype HUD, and build automation.
 
 Not implemented: finalized racing/drifting/parking mode, progression, login, cloud saves, ads, purchases, subscriptions, notifications, daily prizes, audio, or production UI. These remain planned work in the requirements document.
+
+## Credits
+
+- Car: "(FREE) Porsche 911 Carrera 4S" by Karol Miklas, adapted, CC BY-SA 4.0. See `Assets/PocketDrive/Vehicles/Porsche911/ATTRIBUTION.md`. Vehicle design and trademarks belong to their owners; no endorsement implied.
+- Textures: Poly Haven, CC0. See `Assets/PocketDrive/Textures/CREDITS.md`.
