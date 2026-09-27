@@ -20,7 +20,7 @@ namespace PocketDrive.Editor
             PlayerSettings.productName = "Pocket Drive";
             PlayerSettings.bundleVersion = "0.1.0";
             // Development placeholder: choose your owned identifier before store registration.
-            PlayerSettings.SetApplicationIdentifier(NamedBuildTarget.Android, "com.pocketdrive.prototype");
+            PlayerSettings.SetApplicationIdentifier(NamedBuildTarget.Android, "com.pocketdrive.unity");
             PlayerSettings.defaultInterfaceOrientation = UIOrientation.LandscapeLeft;
             PlayerSettings.Android.minSdkVersion = AndroidSdkVersions.AndroidApiLevel26;
             PlayerSettings.Android.targetSdkVersion = AndroidSdkVersions.AndroidApiLevelAuto;

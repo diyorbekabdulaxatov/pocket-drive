@@ -16,7 +16,7 @@ The scene is a handling sandbox with placeholder geometry, not the finished comm
 Use **Pocket Drive → Build Android Development APK**. Output:
 `Builds/Android/PocketDrive-development.apk`
 
-Configuration: landscape, ARM64, IL2CPP, minimum Android API 26, installed automatic target SDK. Builds use development signing. The application ID `com.pocketdrive.prototype` is a placeholder; choose a permanent owned identifier before store registration. This is not a Play Store release build.
+Configuration: landscape, ARM64, IL2CPP, minimum Android API 26, installed automatic target SDK. Builds use development signing. The application ID `com.pocketdrive.unity` is a placeholder (it differs from the earlier Godot build, `com.pocketdrive.prototype`, so both can be installed side by side); choose a permanent owned identifier before store registration. This is not a Play Store release build.
 
 On a connected Android phone, enable Developer options and USB debugging, authorize this Mac, then use Unity's Android Build and Run workflow or install the development APK with Android's `adb install -r` command. Actual phone performance and multi-touch behavior require device testing.
 
