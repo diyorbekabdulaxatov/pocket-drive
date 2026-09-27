@@ -11,6 +11,7 @@ namespace PocketDrive.Editor
     public static class ProjectSetup
     {
         public const string ScenePath = "Assets/PocketDrive/Scenes/DrivingSandbox.unity";
+        public const string TuningPath = "Assets/PocketDrive/Settings/DefaultCarTuning.asset";
 
         [MenuItem("Pocket Drive/Configure Android Project")]
         public static void Configure()
@@ -36,6 +37,25 @@ namespace PocketDrive.Editor
             EditorBuildSettings.scenes = new[] { new EditorBuildSettingsScene(ScenePath, true) };
             AssetDatabase.SaveAssets();
             Debug.Log("POCKET_DRIVE_SETUP_OK");
+        }
+
+        // Regenerates the sandbox from code. Overwrites any hand edits to the scene.
+        [MenuItem("Pocket Drive/Rebuild Sandbox Scene")]
+        public static void RebuildSandbox()
+        {
+            CreateSandbox();
+            AssetDatabase.SaveAssets();
+            Debug.Log("POCKET_DRIVE_SANDBOX_REBUILT");
+        }
+
+        static CarTuning DefaultTuning()
+        {
+            var tuning = AssetDatabase.LoadAssetAtPath<CarTuning>(TuningPath);
+            if (tuning != null) return tuning;
+            Directory.CreateDirectory(Path.GetDirectoryName(TuningPath));
+            tuning = ScriptableObject.CreateInstance<CarTuning>();
+            AssetDatabase.CreateAsset(tuning, TuningPath);
+            return tuning;
         }
 
         static Material Material(string name, Color color)
@@ -72,7 +92,10 @@ namespace PocketDrive.Editor
             Box("Ground", new Vector3(0, -.5f, 0), new Vector3(100, 1, 140), grass);
             Box("Driving pad", new Vector3(0, .025f, 0), new Vector3(50, .05f, 90), road);
             for (int z = -40; z <= 40; z += 8)
-                Box("Lane marking", new Vector3(0, .065f, z), new Vector3(.2f, .02f, 3), white);
+            {
+                var marking = Box("Lane marking", new Vector3(0, .06f, z), new Vector3(.2f, .02f, 3), white);
+                UnityEngine.Object.DestroyImmediate(marking.GetComponent<Collider>());
+            }
             Box("Left barrier", new Vector3(-26, .5f, 0), new Vector3(1, 1, 92), white);
             Box("Right barrier", new Vector3(26, .5f, 0), new Vector3(1, 1, 92), white);
             Box("North barrier", new Vector3(0, .5f, 46), new Vector3(53, 1, 1), white);
@@ -85,6 +108,10 @@ namespace PocketDrive.Editor
             collider.size = new Vector3(1.7f, .6f, 3.4f);
             vehicle.AddComponent<Rigidbody>().mass = 1000;
             var car = vehicle.AddComponent<ArcadeCar>();
+            var carSettings = new SerializedObject(car);
+            carSettings.FindProperty("tuning").objectReferenceValue = DefaultTuning();
+            carSettings.ApplyModifiedPropertiesWithoutUndo();
+            vehicle.AddComponent<CarInput>();
             var chassis = Box("Body", Vector3.zero, new Vector3(1.7f, .6f, 3.4f), orange, vehicle.transform);
             UnityEngine.Object.DestroyImmediate(chassis.GetComponent<Collider>());
             var cabin = Box("Cabin", new Vector3(0, .55f, -.15f), new Vector3(1.4f, .6f, 1.6f), glass, vehicle.transform);

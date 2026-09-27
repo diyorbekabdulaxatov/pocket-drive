@@ -1,88 +1,146 @@
+using System;
 using UnityEngine;
 
 namespace PocketDrive
 {
-    [RequireComponent(typeof(Rigidbody))]
+    // Arcade handling: the collider has no friction and all grip, drive and braking happen here.
+    // Input arrives through SetInput; this class never reads keys or touches.
+    [RequireComponent(typeof(Rigidbody), typeof(BoxCollider))]
     public sealed class ArcadeCar : MonoBehaviour
     {
-        [SerializeField] float acceleration = 14f;
-        [SerializeField] float maxSpeed = 24f;
-        [SerializeField] float steeringRate = 95f;
+        [SerializeField] CarTuning tuning;
+        [SerializeField] LayerMask groundMask = ~0;
+
         Rigidbody body;
+        BoxCollider box;
         Vector3 spawn;
         Quaternion spawnRotation;
         float throttle;
-        float steering;
+        float steer;
+        float smoothedSteer;
+        float recoveryTimer;
+
+        public event Action<float> Hit;
+        public CarTuning Tuning => tuning;
+        public bool Grounded { get; private set; }
+        public float ForwardSpeed { get; private set; }
         public float SpeedKph => body == null ? 0 : body.linearVelocity.magnitude * 3.6f;
 
-        public static Rect ControlRect(int index)
+        public void SetInput(float throttleInput, float steerInput)
         {
-            Rect safe = Screen.safeArea;
-            float size = Mathf.Min(110f, safe.width / 7f);
-            float left = safe.x + 16f;
-            float right = safe.xMax - 16f;
-            float bottom = Screen.height - safe.y - size - 16f;
-            float x = index < 2 ? left + index * (size + 12f)
-                : right - (4 - index) * size - (3 - index) * 12f;
-            return new Rect(x, bottom, size, size);
+            throttle = Mathf.Clamp(throttleInput, -1, 1);
+            steer = Mathf.Clamp(steerInput, -1, 1);
         }
 
         void Awake()
         {
+            if (tuning == null) tuning = ScriptableObject.CreateInstance<CarTuning>();
             body = GetComponent<Rigidbody>();
+            box = GetComponent<BoxCollider>();
             spawn = transform.position;
             spawnRotation = transform.rotation;
             body.interpolation = RigidbodyInterpolation.Interpolate;
             body.collisionDetectionMode = CollisionDetectionMode.ContinuousDynamic;
             body.constraints = RigidbodyConstraints.FreezeRotationX | RigidbodyConstraints.FreezeRotationZ;
-        }
-
-        void Update()
-        {
-            steering = (Input.GetKey(KeyCode.D) || Input.GetKey(KeyCode.RightArrow) ? 1 : 0)
-                - (Input.GetKey(KeyCode.A) || Input.GetKey(KeyCode.LeftArrow) ? 1 : 0);
-            throttle = (Input.GetKey(KeyCode.W) || Input.GetKey(KeyCode.UpArrow) ? 1 : 0)
-                - (Input.GetKey(KeyCode.S) || Input.GetKey(KeyCode.DownArrow) ? 1 : 0);
-            for (int i = 0; i < Input.touchCount; i++)
-            {
-                Touch touch = Input.GetTouch(i);
-                if (touch.phase == TouchPhase.Ended || touch.phase == TouchPhase.Canceled) continue;
-                ApplyPointer(new Vector2(touch.position.x, Screen.height - touch.position.y));
-            }
-            if (Input.touchCount == 0 && Input.GetMouseButton(0))
-                ApplyPointer(new Vector2(Input.mousePosition.x, Screen.height - Input.mousePosition.y));
-            steering = Mathf.Clamp(steering, -1, 1);
-            throttle = Mathf.Clamp(throttle, -1, 1);
-            if (Input.GetKeyDown(KeyCode.R) || transform.position.y < -5) ResetCar();
-        }
-
-        void ApplyPointer(Vector2 point)
-        {
-            if (ControlRect(0).Contains(point)) steering -= 1;
-            if (ControlRect(1).Contains(point)) steering += 1;
-            if (ControlRect(2).Contains(point)) throttle -= 1;
-            if (ControlRect(3).Contains(point)) throttle += 1;
+            if (box.sharedMaterial == null)
+                box.sharedMaterial = new PhysicsMaterial("Car (frictionless)")
+                {
+                    dynamicFriction = 0,
+                    staticFriction = 0,
+                    frictionCombine = PhysicsMaterialCombine.Minimum,
+                    bounciness = .15f,
+                    bounceCombine = PhysicsMaterialCombine.Maximum
+                };
         }
 
         void FixedUpdate()
         {
-            // Cast from beneath the chassis to avoid hitting this car's own collider.
-            if (!Physics.Raycast(body.position + Vector3.down * .31f, Vector3.down, .45f)) return;
+            float dt = Time.fixedDeltaTime;
+            if (body.position.y < tuning.fallResetHeight) { ResetCar(); return; }
+            recoveryTimer = Mathf.Max(0, recoveryTimer - dt);
+            smoothedSteer = Mathf.MoveTowards(smoothedSteer, steer, tuning.steerResponse * dt);
+            Grounded = CheckGround();
+
             Vector3 local = transform.InverseTransformDirection(body.linearVelocity);
-            local.x = Mathf.MoveTowards(local.x, 0, 18f * Time.fixedDeltaTime);
-            local.z = Mathf.MoveTowards(local.z, throttle * (throttle < 0 ? maxSpeed * .35f : maxSpeed),
-                (Mathf.Abs(throttle) > .01f ? acceleration : 5f) * Time.fixedDeltaTime);
+            ForwardSpeed = local.z;
+            if (!Grounded) return;
+
+            float grip = recoveryTimer > 0 ? tuning.recoveryGripScale : 1f;
+            local.x = Mathf.MoveTowards(local.x, 0, tuning.lateralGrip * grip * dt);
+            DriveTarget(local.z, out float target, out float rate);
+            local.z = Mathf.MoveTowards(local.z, target, rate * dt);
             body.linearVelocity = transform.TransformDirection(local);
-            float turn = steering * steeringRate * Mathf.Clamp01(Mathf.Abs(local.z) / 5f) * Mathf.Sign(local.z);
-            body.MoveRotation(body.rotation * Quaternion.Euler(0, turn * Time.fixedDeltaTime, 0));
+
+            float speed01 = Mathf.Clamp01(Mathf.Abs(local.z) / tuning.maxSpeed);
+            float turnRate = Mathf.Lerp(tuning.steerRateLow, tuning.steerRateHigh, speed01)
+                * Mathf.Clamp01(Mathf.Abs(local.z) / tuning.fullSteerSpeed);
+            float yaw = smoothedSteer * turnRate * Mathf.Sign(local.z) * Mathf.Deg2Rad;
+            Vector3 spin = body.angularVelocity;
+            spin.y = Mathf.MoveTowards(spin.y, yaw, tuning.yawResponse * Mathf.Deg2Rad * grip * dt);
+            body.angularVelocity = spin;
         }
 
-        public void ResetCar()
+        // Pressing against the direction of travel brakes first; reverse only starts once nearly stopped.
+        void DriveTarget(float forward, out float target, out float rate)
         {
-            body.position = spawn;
-            body.rotation = spawnRotation;
+            const float stopped = .5f;
+            if (throttle > .01f)
+            {
+                bool braking = forward < -stopped;
+                target = braking ? 0 : tuning.maxSpeed * throttle;
+                rate = braking ? tuning.brakeDeceleration : tuning.acceleration;
+            }
+            else if (throttle < -.01f)
+            {
+                bool braking = forward > stopped;
+                target = braking ? 0 : -tuning.maxReverseSpeed * -throttle;
+                rate = braking ? tuning.brakeDeceleration : tuning.reverseAcceleration;
+            }
+            else
+            {
+                target = 0;
+                rate = tuning.coastDeceleration;
+            }
+        }
+
+        // A sphere cast starting inside the car's own collider never hits it, so no layer tricks are needed.
+        bool CheckGround()
+        {
+            Vector3 halfSize = Vector3.Scale(box.size, transform.lossyScale) * .5f;
+            float radius = Mathf.Min(halfSize.x, halfSize.y) * .8f;
+            Vector3 origin = transform.TransformPoint(box.center);
+            float distance = halfSize.y - radius + tuning.groundProbe;
+            return Physics.SphereCast(origin, radius, Vector3.down, out RaycastHit hit, distance,
+                       groundMask, QueryTriggerInteraction.Ignore)
+                   && hit.normal.y >= tuning.minGroundNormalY;
+        }
+
+        void OnCollisionEnter(Collision collision)
+        {
+            float impulse = collision.impulse.magnitude;
+            if (impulse < tuning.collisionImpulse) return;
+            recoveryTimer = tuning.collisionRecovery;
+            Hit?.Invoke(impulse);
+        }
+
+        public void ResetCar() => PlaceAt(spawn, spawnRotation);
+
+        public void SetSpawn(Vector3 position, Quaternion rotation)
+        {
+            spawn = position;
+            spawnRotation = rotation;
+        }
+
+        public void PlaceAt(Vector3 position, Quaternion rotation)
+        {
+            transform.SetPositionAndRotation(position, rotation);
+            body.position = position;
+            body.rotation = rotation;
             body.linearVelocity = Vector3.zero;
             body.angularVelocity = Vector3.zero;
+            smoothedSteer = 0;
+            recoveryTimer = 0;
+            ForwardSpeed = 0;
         }
     }
 }

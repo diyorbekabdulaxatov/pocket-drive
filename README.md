@@ -30,11 +30,14 @@ For command-line builds (close this project in the editor first):
   -logFile /tmp/pocket-drive-build.log
 ```
 
+`Pocket Drive → Rebuild Sandbox Scene` regenerates the sandbox scene from code and overwrites hand edits. The headless handling check is `PocketDrive.Editor.SandboxChecks.Run` (use it with `-executeMethod` like the build command).
+
 `Pocket Drive → Configure Android Project` reapplies prototype settings and creates the sandbox only if its scene file is absent. The build command also reapplies these prototype settings; update the setup script before changing release identifiers or versioning. It does not overwrite an existing sandbox scene.
 
 ## Layout
 
-- `Assets/PocketDrive/Scripts`: driving, follow camera, prototype HUD.
+- `Assets/PocketDrive/Scripts`: car handling (`ArcadeCar`, `CarTuning`), controls (`CarInput`), follow camera, prototype HUD, app bootstrap.
+- `Assets/PocketDrive/Settings`: tuning assets such as `DefaultCarTuning`.
 - `Assets/PocketDrive/Editor`: project configuration and Android build automation.
 - `Assets/PocketDrive/Scenes`: editable sandbox scene.
 - `Assets/PocketDrive/Art`: generated prototype materials.
