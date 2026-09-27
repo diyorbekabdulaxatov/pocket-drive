@@ -140,6 +140,7 @@ namespace PocketDrive.Editor
             camObject.AddComponent<AudioListener>();var follow=camObject.AddComponent<FollowCamera>();follow.target=carCopy.transform;follow.Snap();
             var so=new SerializedObject(follow);so.FindProperty("height").floatValue=3.4f;so.FindProperty("distance").floatValue=8;so.ApplyModifiedPropertiesWithoutUndo();follow.Snap();
             new GameObject("Coastal City HUD").AddComponent<CoastalCityHud>().car=car;
+            CityPopulation.Add(carCopy.transform);
             Lighting();
             EditorSceneManager.SaveScene(temporary,ScenePath);
             EditorBuildSettings.scenes=new[]{new EditorBuildSettingsScene(ScenePath,true),new EditorBuildSettingsScene(ProjectSetup.ScenePath,true)};

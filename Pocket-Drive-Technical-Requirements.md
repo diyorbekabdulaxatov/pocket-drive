@@ -109,6 +109,8 @@ Each level is a scene or prefab with its own rules asset (time limits, star thre
 7. **Done.** Better chase camera: heading follows the car smoothly so spins and reversing don't whip the view.
 7a. **Done (first pass).** Realistic first area in Coastal City: CC0 photo textures (Poly Haven) on roads, pavements, stucco and brick with real-world scale, a 116-bay parking lot south of Palm Boulevard, and the Porsche 911 Carrera 4S model (Karol Miklas, CC BY-SA 4.0) on the player car. Before a paid release the Porsche must be debadged and renamed, or replaced.
 7b. **Next.** Performance check of the Coastal City build on Diyorbek's phone.
+7d. **Done (first pass).** AI traffic: 12 cars keep to the right lane, turn at intersections, stop at timed lights and brake for the player and each other. Pedestrian system written; it activates when a character model is placed in `Assets/PocketDrive/Characters`.
+7e. **Waiting for Diyorbek.** Character model and walking animation from Mixamo for pedestrians.
 7c. **Next.** Wheels that spin and steer; realistic trees and building models from free Asset Store packs added to Diyorbek's Unity account.
 8. **Next.** Parking challenge: parking bay, stop detection, timer, hit counter, stars, results panel, restart.
 9. **Next.** Time-trial challenge: ordered checkpoints, timer, finish, stars.
