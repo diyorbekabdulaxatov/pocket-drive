@@ -207,6 +207,7 @@ namespace PocketDrive.Editor
             const BindingFlags flags = BindingFlags.Instance | BindingFlags.NonPublic;
             typeof(TrafficSystem).GetMethod("Start", flags).Invoke(traffic, null);
             typeof(PedestrianSystem).GetMethod("Start", flags).Invoke(people, null);
+            var previousMode = Physics.simulationMode;
             Physics.simulationMode = SimulationMode.Script;
             for (int i = 0; i < 1000; i++)
             {
@@ -214,6 +215,7 @@ namespace PocketDrive.Editor
                 if (people.enabled) typeof(PedestrianSystem).GetMethod("FixedUpdate", flags).Invoke(people, null);
                 Physics.Simulate(.02f);
             }
+            Physics.simulationMode = previousMode;
             Physics.SyncTransforms();
             // Edit mode does not run animators, so pose each walker mid-stride.
             foreach (var animator in people.GetComponentsInChildren<Animator>())
