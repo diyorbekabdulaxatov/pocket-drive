@@ -70,8 +70,8 @@ namespace PocketDrive.Editor
         static void Material(string name,Color color,float smooth=.1f,bool texture=false,bool facade=false)
         {
             string path=$"{Root}/{name}.mat";var m=AssetDatabase.LoadAssetAtPath<Material>(path);
-            if(m==null){m=new Material(Shader.Find("Standard"));AssetDatabase.CreateAsset(m,path);}
-            m.color=color;m.SetFloat("_Glossiness",smooth);m.enableInstancing=true;
+            if(m==null){m=new Material(PocketDrive.Editor.RenderPipelineSetup.Lit);AssetDatabase.CreateAsset(m,path);}
+            m.color=color;PocketDrive.Editor.RenderPipelineSetup.SetSmoothness(m,smooth);m.enableInstancing=true;
             if(texture||facade)
             {
                 var tex=new Texture2D(128,128,TextureFormat.RGB24,true);var pixels=new Color[128*128];

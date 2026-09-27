@@ -63,8 +63,7 @@ namespace PocketDrive.Editor
             string path = $"Assets/PocketDrive/Art/{name}.mat";
             var material = AssetDatabase.LoadAssetAtPath<Material>(path);
             if (material != null) return material;
-            material = new Material(Shader.Find("Standard")) { color = color };
-            material.SetFloat("_Glossiness", .15f);
+            material = RenderPipelineSetup.NewLitMaterial(color, .15f);
             AssetDatabase.CreateAsset(material, path);
             return material;
         }

@@ -16,14 +16,17 @@ A polished, offline-friendly arcade driving game for Android phones. It must be 
 |---|---|---|
 | Platform | Android first. iOS is out of scope for 1.0. | Confirmed |
 | Game mode | **Parking and time-trial challenges** on short handcrafted levels. | Default. Not confirmed by Diyorbek yet; can change before Step 8. |
-| Vehicle physics | Custom arcade Rigidbody controller, not WheelColliders. | Confirmed by review |
+| Visual style | **Realistic**: supercars and real-looking 3D cars in a believable city. No cartoon or low-poly look. | Confirmed by Diyorbek |
+| Assets | **Free only**, with licences that allow commercial use (for example CC0 textures from Poly Haven or ambientCG). | Confirmed by Diyorbek |
+| Map | Keep Codex's Coastal City layout (street grid, freeway loop, ramps) and replace its art area by area, starting near the spawn. | Confirmed by Diyorbek |
+| Vehicle physics | Custom Rigidbody controller, not WheelColliders. Moving from pure arcade toward per-wheel suspension and weight transfer to suit supercars. | Updated |
 | Backend | **No own backend for 1.0.** Local saves on the device. If cloud save or purchase checks become necessary, use a managed service (for example Unity Gaming Services) instead of running a server. | Confirmed by review |
 | Ads | **No banner ads.** "Daily banners" means in-game announcement cards on the home screen. Optional rewarded ads may be added after launch. | Confirmed by review |
 | Purchases | Small catalog through Google Play Billing (Unity IAP), added after the core game is proven. | Planned for Phase C |
 | Subscription | After launch, only once there is a steady stream of new content to offer. | Deferred |
 | Multiplayer | Out of scope. | Confirmed |
 | Unity version | 6000.6.3f1 today. Move to the current LTS release before content production if 6000.6 is not LTS. | Needs your OK |
-| Render pipeline | Move from Built-in to URP while there are only six materials. | Needs your OK |
+| Render pipeline | URP 17.6 with ACES tonemapping, light bloom and MSAA 2x. | Done |
 | Input | Move from the legacy Input Manager to the Input System package. | Needs your OK |
 
 ## 3. Scope of the first release (1.0)
@@ -101,10 +104,11 @@ Each level is a scene or prefab with its own rules asset (time limits, star thre
 2. **Done.** Fix the car controller physics: frictionless car collider, robust ground check with a layer mask, remove lane-marking colliders, split brake from reverse, steering smoothing and speed-based steering, less sticky collisions, clean reset.
 3. **Done.** Separate input from the car: a `CarInput` component for keyboard and on-screen touch buttons, handling values in a `CarTuning` asset (`Assets/PocketDrive/Settings/DefaultCarTuning.asset`), frame-rate setup moved to `GameBootstrap`.
 4. **Needs your OK.** Switch to the Input System package (needs a Unity editor restart).
-5. **Needs your OK.** Switch the render pipeline to URP and convert materials.
+5. **Done.** Switch the render pipeline to URP and convert materials (`Pocket Drive → Switch to URP`).
 6. **Needs your OK.** Decide the Unity version: stay on 6000.6.3f1 or move to the current LTS.
 7. **Done.** Better chase camera: heading follows the car smoothly so spins and reversing don't whip the view.
-8. **In progress.** Parking challenge: parking bay, stop detection, timer, hit counter, stars, results panel, restart.
+7a. **In progress.** Realistic first area in Coastal City near the spawn: photo-real road, pavement and building textures, a parking lot, and a realistic free supercar model.
+8. **Next.** Parking challenge: parking bay, stop detection, timer, hit counter, stars, results panel, restart.
 9. **Next.** Time-trial challenge: ordered checkpoints, timer, finish, stars.
 10. **Next.** Pause menu and app-background handling.
 11. **Next.** First engine, collision and UI sounds.
