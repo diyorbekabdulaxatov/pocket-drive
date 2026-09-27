@@ -1,0 +1,7 @@
+Original procedural city, seed 1705
+Buildings: 64
+Palms: 263
+Mesh chunks: 721
+Playable street grid: 600 x 600 metres
+Elevated freeway footprint: 860 x 860 metres
+2 access ramps; highway deck 9m high
