@@ -57,3 +57,4 @@ Not implemented: finalized racing/drifting/parking mode, progression, login, clo
 
 - Car: "(FREE) Porsche 911 Carrera 4S" by Karol Miklas, adapted, CC BY-SA 4.0. See `Assets/PocketDrive/Vehicles/Porsche911/ATTRIBUTION.md`. Vehicle design and trademarks belong to their owners; no endorsement implied.
 - Textures: Poly Haven, CC0. See `Assets/PocketDrive/Textures/CREDITS.md`.
+- Downtown map: "City" by Mateusz Woliński (CC BY 4.0). Car park: "Parking lot" by Veterock (CC BY 4.0). Car: "AC - Lotus Exige 240" by David & 3D (Sketchfab Standard). See `ASSET-LICENSES.md`.

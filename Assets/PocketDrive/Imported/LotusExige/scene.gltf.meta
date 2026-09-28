@@ -1,0 +1,176 @@
+fileFormatVersion: 2
+guid: 8b1e97acf4b8541c1a9f7329a833ab85
+ScriptedImporter:
+  internalIDToNameTable: []
+  externalObjects: {}
+  serializedVersion: 2
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+  script: {fileID: 11500000, guid: 715df9372183c47e389bb6e19fbc3b52, type: 3}
+  editorImportSettings:
+    generateSecondaryUVSet: 0
+  importSettings:
+    nodeNameMethod: 1
+    animationMethod: 2
+    generateMipMaps: 1
+    texturesReadable: 0
+    defaultMinFilterMode: 9729
+    defaultMagFilterMode: 9729
+    anisotropicFilterLevel: 1
+  instantiationSettings:
+    mask: -1
+    layer: 0
+    skinUpdateWhenOffscreen: 1
+    lightIntensityFactor: 1
+    sceneObjectCreation: 2
+  assetDependencies:
+  - type: 0
+    originalUri: Assets/PocketDrive/Imported/LotusExige/scene.bin
+    assetPath: Assets/PocketDrive/Imported/LotusExige/scene.bin
+  - type: 1
+    originalUri: Assets/PocketDrive/Imported/LotusExige/textures/battistrada_baseColor.png
+    assetPath: Assets/PocketDrive/Imported/LotusExige/textures/battistrada_baseColor.png
+  - type: 1
+    originalUri: Assets/PocketDrive/Imported/LotusExige/textures/battistrada_normal.png
+    assetPath: Assets/PocketDrive/Imported/LotusExige/textures/battistrada_normal.png
+  - type: 1
+    originalUri: Assets/PocketDrive/Imported/LotusExige/textures/CAR_RIM.3_normal.png
+    assetPath: Assets/PocketDrive/Imported/LotusExige/textures/CAR_RIM.3_normal.png
+  - type: 1
+    originalUri: Assets/PocketDrive/Imported/LotusExige/textures/CAR_LOGO_elise.2_baseColor.png
+    assetPath: Assets/PocketDrive/Imported/LotusExige/textures/CAR_LOGO_elise.2_baseColor.png
+  - type: 1
+    originalUri: Assets/PocketDrive/Imported/LotusExige/textures/INT_spotted_plastic.4_baseColor.png
+    assetPath: Assets/PocketDrive/Imported/LotusExige/textures/INT_spotted_plastic.4_baseColor.png
+  - type: 1
+    originalUri: Assets/PocketDrive/Imported/LotusExige/textures/INT_spotted_plastic.4_normal.png
+    assetPath: Assets/PocketDrive/Imported/LotusExige/textures/INT_spotted_plastic.4_normal.png
+  - type: 1
+    originalUri: Assets/PocketDrive/Imported/LotusExige/textures/INT_black_plastic.4_baseColor.png
+    assetPath: Assets/PocketDrive/Imported/LotusExige/textures/INT_black_plastic.4_baseColor.png
+  - type: 1
+    originalUri: Assets/PocketDrive/Imported/LotusExige/textures/INT_black_plastic.4_normal.png
+    assetPath: Assets/PocketDrive/Imported/LotusExige/textures/INT_black_plastic.4_normal.png
+  - type: 1
+    originalUri: Assets/PocketDrive/Imported/LotusExige/textures/INT_aluminium.1_normal.png
+    assetPath: Assets/PocketDrive/Imported/LotusExige/textures/INT_aluminium.1_normal.png
+  - type: 1
+    originalUri: Assets/PocketDrive/Imported/LotusExige/textures/INT_side_light.1_baseColor.png
+    assetPath: Assets/PocketDrive/Imported/LotusExige/textures/INT_side_light.1_baseColor.png
+  - type: 1
+    originalUri: Assets/PocketDrive/Imported/LotusExige/textures/INT_white_plastic.2_baseColor.png
+    assetPath: Assets/PocketDrive/Imported/LotusExige/textures/INT_white_plastic.2_baseColor.png
+  - type: 1
+    originalUri: Assets/PocketDrive/Imported/LotusExige/textures/CAR_disk_baseColor.png
+    assetPath: Assets/PocketDrive/Imported/LotusExige/textures/CAR_disk_baseColor.png
+  - type: 1
+    originalUri: Assets/PocketDrive/Imported/LotusExige/textures/CAR_disk_normal.png
+    assetPath: Assets/PocketDrive/Imported/LotusExige/textures/CAR_disk_normal.png
+  - type: 1
+    originalUri: Assets/PocketDrive/Imported/LotusExige/textures/CAR_mechanics_AT.4_baseColor.png
+    assetPath: Assets/PocketDrive/Imported/LotusExige/textures/CAR_mechanics_AT.4_baseColor.png
+  - type: 1
+    originalUri: Assets/PocketDrive/Imported/LotusExige/textures/CAR_mechanics_AT.4_normal.png
+    assetPath: Assets/PocketDrive/Imported/LotusExige/textures/CAR_mechanics_AT.4_normal.png
+  - type: 1
+    originalUri: Assets/PocketDrive/Imported/LotusExige/textures/INT_aluminium.1_0_baseColor.png
+    assetPath: Assets/PocketDrive/Imported/LotusExige/textures/INT_aluminium.1_0_baseColor.png
+  - type: 1
+    originalUri: Assets/PocketDrive/Imported/LotusExige/textures/INT_aluminium.1_1_normal.png
+    assetPath: Assets/PocketDrive/Imported/LotusExige/textures/INT_aluminium.1_1_normal.png
+  - type: 1
+    originalUri: Assets/PocketDrive/Imported/LotusExige/textures/CAR_lights_back.1_normal.png
+    assetPath: Assets/PocketDrive/Imported/LotusExige/textures/CAR_lights_back.1_normal.png
+  - type: 1
+    originalUri: Assets/PocketDrive/Imported/LotusExige/textures/INT_chrome_baseColor.png
+    assetPath: Assets/PocketDrive/Imported/LotusExige/textures/INT_chrome_baseColor.png
+  - type: 1
+    originalUri: Assets/PocketDrive/Imported/LotusExige/textures/INT_soft_leather_Skinned_normal.png
+    assetPath: Assets/PocketDrive/Imported/LotusExige/textures/INT_soft_leather_Skinned_normal.png
+  - type: 1
+    originalUri: Assets/PocketDrive/Imported/LotusExige/textures/INT_controlpanel_D_baseColor.png
+    assetPath: Assets/PocketDrive/Imported/LotusExige/textures/INT_controlpanel_D_baseColor.png
+  - type: 1
+    originalUri: Assets/PocketDrive/Imported/LotusExige/textures/INT_dashboard.3_baseColor.png
+    assetPath: Assets/PocketDrive/Imported/LotusExige/textures/INT_dashboard.3_baseColor.png
+  - type: 1
+    originalUri: Assets/PocketDrive/Imported/LotusExige/textures/INT_belt_baseColor.png
+    assetPath: Assets/PocketDrive/Imported/LotusExige/textures/INT_belt_baseColor.png
+  - type: 1
+    originalUri: Assets/PocketDrive/Imported/LotusExige/textures/INT_belt_normal.png
+    assetPath: Assets/PocketDrive/Imported/LotusExige/textures/INT_belt_normal.png
+  - type: 1
+    originalUri: Assets/PocketDrive/Imported/LotusExige/textures/INT_seams.1_baseColor.png
+    assetPath: Assets/PocketDrive/Imported/LotusExige/textures/INT_seams.1_baseColor.png
+  - type: 1
+    originalUri: Assets/PocketDrive/Imported/LotusExige/textures/INT_seams.1_normal.png
+    assetPath: Assets/PocketDrive/Imported/LotusExige/textures/INT_seams.1_normal.png
+  - type: 1
+    originalUri: Assets/PocketDrive/Imported/LotusExige/textures/INT_glass_baseColor.png
+    assetPath: Assets/PocketDrive/Imported/LotusExige/textures/INT_glass_baseColor.png
+  - type: 1
+    originalUri: Assets/PocketDrive/Imported/LotusExige/textures/INT_seat_logo_baseColor.png
+    assetPath: Assets/PocketDrive/Imported/LotusExige/textures/INT_seat_logo_baseColor.png
+  - type: 1
+    originalUri: Assets/PocketDrive/Imported/LotusExige/textures/Limiter_baseColor.png
+    assetPath: Assets/PocketDrive/Imported/LotusExige/textures/Limiter_baseColor.png
+  - type: 1
+    originalUri: Assets/PocketDrive/Imported/LotusExige/textures/CAR_exhaust_baseColor.png
+    assetPath: Assets/PocketDrive/Imported/LotusExige/textures/CAR_exhaust_baseColor.png
+  - type: 1
+    originalUri: Assets/PocketDrive/Imported/LotusExige/textures/CAR_Carbon_baseColor.png
+    assetPath: Assets/PocketDrive/Imported/LotusExige/textures/CAR_Carbon_baseColor.png
+  - type: 1
+    originalUri: Assets/PocketDrive/Imported/LotusExige/textures/CAR_Carbon_normal.png
+    assetPath: Assets/PocketDrive/Imported/LotusExige/textures/CAR_Carbon_normal.png
+  - type: 1
+    originalUri: Assets/PocketDrive/Imported/LotusExige/textures/CAR_Plastica_OCC_baseColor.png
+    assetPath: Assets/PocketDrive/Imported/LotusExige/textures/CAR_Plastica_OCC_baseColor.png
+  - type: 1
+    originalUri: Assets/PocketDrive/Imported/LotusExige/textures/CAR_mechanics_AT.4_0_baseColor.png
+    assetPath: Assets/PocketDrive/Imported/LotusExige/textures/CAR_mechanics_AT.4_0_baseColor.png
+  - type: 1
+    originalUri: Assets/PocketDrive/Imported/LotusExige/textures/CAR_Decals_Alfa.1_baseColor.png
+    assetPath: Assets/PocketDrive/Imported/LotusExige/textures/CAR_Decals_Alfa.1_baseColor.png
+  - type: 1
+    originalUri: Assets/PocketDrive/Imported/LotusExige/textures/CAR_Grid_Exagon.2_baseColor.png
+    assetPath: Assets/PocketDrive/Imported/LotusExige/textures/CAR_Grid_Exagon.2_baseColor.png
+  - type: 1
+    originalUri: Assets/PocketDrive/Imported/LotusExige/textures/CAR_Grid_Exagon.2_normal.png
+    assetPath: Assets/PocketDrive/Imported/LotusExige/textures/CAR_Grid_Exagon.2_normal.png
+  - type: 1
+    originalUri: Assets/PocketDrive/Imported/LotusExige/textures/CAR_grid_engine_baseColor.png
+    assetPath: Assets/PocketDrive/Imported/LotusExige/textures/CAR_grid_engine_baseColor.png
+  - type: 1
+    originalUri: Assets/PocketDrive/Imported/LotusExige/textures/CAR_grid_engine_normal.png
+    assetPath: Assets/PocketDrive/Imported/LotusExige/textures/CAR_grid_engine_normal.png
+  - type: 1
+    originalUri: Assets/PocketDrive/Imported/LotusExige/textures/CAR_engine_baseColor.png
+    assetPath: Assets/PocketDrive/Imported/LotusExige/textures/CAR_engine_baseColor.png
+  - type: 1
+    originalUri: Assets/PocketDrive/Imported/LotusExige/textures/CAR_engine_normal.png
+    assetPath: Assets/PocketDrive/Imported/LotusExige/textures/CAR_engine_normal.png
+  - type: 1
+    originalUri: Assets/PocketDrive/Imported/LotusExige/textures/CAR_Griglia_RETRO_baseColor.png
+    assetPath: Assets/PocketDrive/Imported/LotusExige/textures/CAR_Griglia_RETRO_baseColor.png
+  - type: 1
+    originalUri: Assets/PocketDrive/Imported/LotusExige/textures/CAR_Griglia_RETRO_normal.png
+    assetPath: Assets/PocketDrive/Imported/LotusExige/textures/CAR_Griglia_RETRO_normal.png
+  - type: 1
+    originalUri: Assets/PocketDrive/Imported/LotusExige/textures/CAR_lights_back.1_0_baseColor.png
+    assetPath: Assets/PocketDrive/Imported/LotusExige/textures/CAR_lights_back.1_0_baseColor.png
+  - type: 1
+    originalUri: Assets/PocketDrive/Imported/LotusExige/textures/CAR_lights_back.1_0_normal.png
+    assetPath: Assets/PocketDrive/Imported/LotusExige/textures/CAR_lights_back.1_0_normal.png
+  reportItems:
+  - type: 2
+    code: 20
+    messages:
+    - KHR_materials_specular
+  - type: 2
+    code: 31
+    messages: []
+  - type: 2
+    code: 31
+    messages: []

@@ -39,16 +39,21 @@ namespace PocketDrive.Editor
             return bays.ToArray();
         }
 
-        public static void AddParking(ArcadeCar car, FollowCamera camera)
+        public static void AddParking(ArcadeCar car, FollowCamera camera) =>
+            AddParking(car, camera, Bays(), new Vector3(0, .42f, LotCentreZ + LotHalfDepth + 3f), 180f,
+                new Vector2(BayWidth, BayDepth));
+
+        public static ParkingChallenge AddParking(ArcadeCar car, FollowCamera camera, ParkingChallenge.Bay[] bays,
+            Vector3 start, float startHeading, Vector2 baySize)
         {
             var challenge = new GameObject("Parking challenge").AddComponent<ParkingChallenge>();
             var settings = new SerializedObject(challenge);
             settings.FindProperty("car").objectReferenceValue = car;
             settings.FindProperty("followCamera").objectReferenceValue = camera;
-            settings.FindProperty("marker").objectReferenceValue = Marker(challenge.transform);
-            settings.FindProperty("startPosition").vector3Value = new Vector3(0, .42f, LotCentreZ + LotHalfDepth + 3f);
-            settings.FindProperty("startHeading").floatValue = 180f;
-            var bays = Bays();
+            settings.FindProperty("marker").objectReferenceValue = Marker(challenge.transform, baySize);
+            settings.FindProperty("startPosition").vector3Value = start;
+            settings.FindProperty("startHeading").floatValue = startHeading;
+            settings.FindProperty("baySize").vector2Value = baySize;
             var list = settings.FindProperty("bays");
             list.arraySize = bays.Length;
             for (int i = 0; i < bays.Length; i++)
@@ -58,10 +63,11 @@ namespace PocketDrive.Editor
                 element.FindPropertyRelative("heading").floatValue = bays[i].heading;
             }
             settings.ApplyModifiedPropertiesWithoutUndo();
+            return challenge;
         }
 
         // Green outline on the ground plus a floating diamond; the last child is the diamond (it bobs at runtime).
-        static Transform Marker(Transform parent)
+        static Transform Marker(Transform parent, Vector2 baySize)
         {
             var marker = new GameObject("Target bay marker").transform;
             marker.SetParent(parent, false);
@@ -79,7 +85,7 @@ namespace PocketDrive.Editor
                 renderer.sharedMaterial = material;
                 renderer.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
             }
-            float w = BayWidth - .2f, d = BayDepth - .2f;
+            float w = baySize.x - .2f, d = baySize.y - .2f;
             Part("Left edge", new Vector3(-w / 2, .01f, 0), new Vector3(.18f, .02f, d), Quaternion.identity);
             Part("Right edge", new Vector3(w / 2, .01f, 0), new Vector3(.18f, .02f, d), Quaternion.identity);
             Part("Back edge", new Vector3(0, .01f, d / 2), new Vector3(w, .02f, .18f), Quaternion.identity);
@@ -101,9 +107,11 @@ namespace PocketDrive.Editor
 
         // Headless check: a car placed squarely in the target bay wins with 3 stars; one parked crooked or
         // in the wrong bay does not; running out of time fails.
-        public static void Checks()
+        public static void Checks() => RunChecks(CoastalCityBuilder.ScenePath);
+
+        public static void RunChecks(string scenePath)
         {
-            EditorSceneManager.OpenScene(CoastalCityBuilder.ScenePath);
+            EditorSceneManager.OpenScene(scenePath);
             var challenge = Object.FindAnyObjectByType<ParkingChallenge>(FindObjectsInactive.Include);
             Require(challenge != null, "City has no parking challenge");
             var car = Object.FindAnyObjectByType<ArcadeCar>();
@@ -113,7 +121,7 @@ namespace PocketDrive.Editor
             typeof(ParkingChallenge).GetMethod("OnEnable", flags).Invoke(challenge, null);
             var carTick = typeof(ArcadeCar).GetMethod("FixedUpdate", flags);
             var challengeTick = typeof(ParkingChallenge).GetMethod("FixedUpdate", flags);
-            var bays = Bays();
+            var bays = challenge.Bays;
             var previousMode = Physics.simulationMode;
             try
             {
@@ -134,22 +142,23 @@ namespace PocketDrive.Editor
                 }
 
                 // The start spot must be inside the lot entrance and on the ground.
-                challenge.Begin(10);
+                int target = bays.Length / 3, other = bays.Length - 2;
+                challenge.Begin(target);
                 Run(60);
                 Require(challenge.Current == ParkingChallenge.State.Running, "Challenge ended while waiting at the start");
                 Require(car.Grounded, "Car is not on the ground at the challenge start");
 
-                ParkIn(bays[10], 0);
+                ParkIn(bays[target], 0);
                 Run(100);
                 Require(challenge.Current == ParkingChallenge.State.Won && challenge.Stars == 3,
                     $"Clean park in the target bay gave {challenge.Current} with {challenge.Stars} stars");
 
-                challenge.Begin(10);
-                ParkIn(bays[10], 40);
+                challenge.Begin(target);
+                ParkIn(bays[target], 40);
                 Run(100);
                 Require(challenge.Current == ParkingChallenge.State.Running, "A crooked car counted as parked");
 
-                ParkIn(bays[30], 0);
+                ParkIn(bays[other], 0);
                 Run(100);
                 Require(challenge.Current == ParkingChallenge.State.Running, "Parking in the wrong bay counted");
 

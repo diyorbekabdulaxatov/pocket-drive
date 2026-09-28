@@ -82,27 +82,38 @@ namespace PocketDrive.Editor
 
         // Replaces the car's visual children with the Porsche and fits the collider to it,
         // keeping the collider's bottom (and so the car's ride height) where it was.
-        public static bool AttachPorsche(Transform car)
+        public static bool AttachPorsche(Transform car) =>
+            AttachModel(car, PorschePath, "Porsche 911 Carrera 4S (Karol Miklas, CC BY-SA 4.0)", "bumper_front");
+
+        public static bool AttachModel(Transform car, string modelPath, string label, string frontPartName)
         {
-            var prefab = AssetDatabase.LoadAssetAtPath<GameObject>(PorschePath);
+            var prefab = AssetDatabase.LoadAssetAtPath<GameObject>(modelPath);
             var box = car.GetComponent<BoxCollider>();
             if (prefab == null || box == null) return false;
 
             for (int i = car.childCount - 1; i >= 0; i--) Object.DestroyImmediate(car.GetChild(i).gameObject);
-            var model = (GameObject)PrefabUtility.InstantiatePrefab(prefab, car);
-            model.name = "Porsche 911 Carrera 4S (Karol Miklas, CC BY-SA 4.0)";
-            model.transform.localPosition = Vector3.zero;
-            model.transform.localRotation = Quaternion.identity;
+            // The model keeps its own root transform (Sketchfab exports turn Z-up to Y-up there); we orient a pivot.
+            var model = new GameObject(label);
+            model.transform.SetParent(car, false);
+            PrefabUtility.InstantiatePrefab(prefab, model.transform);
             foreach (var collider in model.GetComponentsInChildren<Collider>()) Object.DestroyImmediate(collider);
 
-            // Face the car's +Z: the front bumper must end up ahead of the model's centre.
+            // Stand the car upright and face it along +Z. Some exports arrive lying on their side or backwards,
+            // so try the likely orientations: length along Z, height smallest, front bumper ahead and low.
+            var bumper = model.GetComponentsInChildren<Renderer>()
+                .FirstOrDefault(r => r.name.ToLowerInvariant().Contains(frontPartName.ToLowerInvariant()));
             Bounds bounds = LocalBounds(car, model);
-            var bumper = model.GetComponentsInChildren<Transform>().FirstOrDefault(t => t.name.StartsWith("bumper_front"));
-            var bumperRenderer = bumper != null ? bumper.GetComponent<Renderer>() : null;
-            if (bumperRenderer != null && car.InverseTransformPoint(bumperRenderer.bounds.center).z < bounds.center.z)
+            foreach (var rotation in new[] { Vector3.zero, new Vector3(0, 180, 0), new Vector3(-90, 0, 0), new Vector3(90, 0, 0),
+                                             new Vector3(-90, 180, 0), new Vector3(90, 180, 0) })
             {
-                model.transform.localRotation = Quaternion.Euler(0, 180, 0);
+                model.transform.localRotation = Quaternion.Euler(rotation);
                 bounds = LocalBounds(car, model);
+                bool lengthAlongZ = bounds.size.z > bounds.size.x && bounds.size.z > bounds.size.y;
+                bool flat = bounds.size.y < bounds.size.x * 1.2f;
+                if (!lengthAlongZ || !flat) continue;
+                if (bumper == null) break;
+                Vector3 front = car.InverseTransformPoint(bumper.bounds.center);
+                if (front.z > bounds.center.z && front.y < bounds.center.y + .1f) break;
             }
 
             float bottom = box.center.y - box.size.y / 2;

@@ -9,6 +9,9 @@ Update this file whenever an asset is added or removed.
 |---|---|---|---|---|---|
 | Porsche 911 Carrera 4S (adapted) | `Assets/PocketDrive/Vehicles/Porsche911/` | Karol Miklas, Sketchfab | CC BY-SA 4.0 | Yes, with credit and share-alike for the model | Real brand: debadge and rename or replace before a paid release (trademark). |
 | asphalt_02, concrete_pavement, concrete_floor_worn_001, plastered_wall_04, red_brick_03 | `Assets/PocketDrive/Textures/` | Poly Haven | CC0 | Yes | No credit required. |
+| City | `Assets/PocketDrive/Imported/City/` | "City" by Mateusz Woliński, https://sketchfab.com/3d-models/city-1f50f0d6ec5a493d8e91d7db1106b324 | CC BY 4.0 | Yes, with credit | Downtown map. Includes static parked vehicles. |
+| Parking lot | `Assets/PocketDrive/Imported/ParkingLot/` | "Parking lot" by Veterock, https://sketchfab.com/3d-models/parking-lot-80e54d8326ea4646949961e8ada35518 | CC BY 4.0 | Yes, with credit | Parking challenge venue in Downtown. |
+| Lotus Exige 240 | `Assets/PocketDrive/Imported/LotusExige/` | "AC - Lotus Exige 240 [FREE]" by David & 3D, https://sketchfab.com/3d-models/ac-lotus-exige-240-free-a770a08d0c17446cbec7721f3dd1ede7 | Sketchfab Standard | Yes | Player car in Downtown. Real brand: trademark question before a paid release, as with the Porsche. |
 | glTFast importer | `Packages/manifest.json` | Unity Technologies | Unity Companion License | Yes | Package, not art. |
 
 Removed: Quaternius placeholder pedestrians (CC0) — removed 28 September 2026 at Diyorbek's request (cartoon style).

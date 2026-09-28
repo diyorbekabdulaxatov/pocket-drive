@@ -29,6 +29,7 @@ namespace PocketDrive
         [SerializeField] float headingTolerance = 20f;
         [SerializeField] float settleTime = 1f;
 
+        public Bay[] Bays => bays;
         public State Current { get; private set; } = State.FreeDrive;
         public float Elapsed { get; private set; }
         public int Hits { get; private set; }

@@ -1,0 +1,158 @@
+fileFormatVersion: 2
+guid: f64ada3f22ee94001bf27ce576b69acd
+ScriptedImporter:
+  internalIDToNameTable: []
+  externalObjects: {}
+  serializedVersion: 2
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+  script: {fileID: 11500000, guid: 715df9372183c47e389bb6e19fbc3b52, type: 3}
+  editorImportSettings:
+    generateSecondaryUVSet: 0
+  importSettings:
+    nodeNameMethod: 1
+    animationMethod: 2
+    generateMipMaps: 1
+    texturesReadable: 0
+    defaultMinFilterMode: 9729
+    defaultMagFilterMode: 9729
+    anisotropicFilterLevel: 1
+  instantiationSettings:
+    mask: -1
+    layer: 0
+    skinUpdateWhenOffscreen: 1
+    lightIntensityFactor: 1
+    sceneObjectCreation: 2
+  assetDependencies:
+  - type: 0
+    originalUri: Assets/PocketDrive/Imported/ParkingLot/scene.bin
+    assetPath: Assets/PocketDrive/Imported/ParkingLot/scene.bin
+  - type: 1
+    originalUri: Assets/PocketDrive/Imported/ParkingLot/textures/base_m_diffuse.jpeg
+    assetPath: Assets/PocketDrive/Imported/ParkingLot/textures/base_m_diffuse.jpeg
+  - type: 1
+    originalUri: Assets/PocketDrive/Imported/ParkingLot/textures/base_m_normal.png
+    assetPath: Assets/PocketDrive/Imported/ParkingLot/textures/base_m_normal.png
+  - type: 1
+    originalUri: Assets/PocketDrive/Imported/ParkingLot/textures/marks_m_diffuse.jpeg
+    assetPath: Assets/PocketDrive/Imported/ParkingLot/textures/marks_m_diffuse.jpeg
+  - type: 1
+    originalUri: Assets/PocketDrive/Imported/ParkingLot/textures/marks_m_normal.png
+    assetPath: Assets/PocketDrive/Imported/ParkingLot/textures/marks_m_normal.png
+  - type: 1
+    originalUri: Assets/PocketDrive/Imported/ParkingLot/textures/box2_m_diffuse.jpeg
+    assetPath: Assets/PocketDrive/Imported/ParkingLot/textures/box2_m_diffuse.jpeg
+  - type: 1
+    originalUri: Assets/PocketDrive/Imported/ParkingLot/textures/box2_m_normal.png
+    assetPath: Assets/PocketDrive/Imported/ParkingLot/textures/box2_m_normal.png
+  - type: 1
+    originalUri: Assets/PocketDrive/Imported/ParkingLot/textures/fencebase_mat_diffuse.jpeg
+    assetPath: Assets/PocketDrive/Imported/ParkingLot/textures/fencebase_mat_diffuse.jpeg
+  - type: 1
+    originalUri: Assets/PocketDrive/Imported/ParkingLot/textures/fencebase_mat_normal.png
+    assetPath: Assets/PocketDrive/Imported/ParkingLot/textures/fencebase_mat_normal.png
+  - type: 1
+    originalUri: Assets/PocketDrive/Imported/ParkingLot/textures/fencerings_mat_diffuse.jpeg
+    assetPath: Assets/PocketDrive/Imported/ParkingLot/textures/fencerings_mat_diffuse.jpeg
+  - type: 1
+    originalUri: Assets/PocketDrive/Imported/ParkingLot/textures/fencerings_mat_normal.png
+    assetPath: Assets/PocketDrive/Imported/ParkingLot/textures/fencerings_mat_normal.png
+  - type: 1
+    originalUri: Assets/PocketDrive/Imported/ParkingLot/textures/fenceframe_mat_diffuse.jpeg
+    assetPath: Assets/PocketDrive/Imported/ParkingLot/textures/fenceframe_mat_diffuse.jpeg
+  - type: 1
+    originalUri: Assets/PocketDrive/Imported/ParkingLot/textures/fenceframe_mat_normal.png
+    assetPath: Assets/PocketDrive/Imported/ParkingLot/textures/fenceframe_mat_normal.png
+  - type: 1
+    originalUri: Assets/PocketDrive/Imported/ParkingLot/textures/fencemesh_mat_diffuse.png
+    assetPath: Assets/PocketDrive/Imported/ParkingLot/textures/fencemesh_mat_diffuse.png
+  - type: 1
+    originalUri: Assets/PocketDrive/Imported/ParkingLot/textures/fencemesh_mat_normal.png
+    assetPath: Assets/PocketDrive/Imported/ParkingLot/textures/fencemesh_mat_normal.png
+  - type: 1
+    originalUri: Assets/PocketDrive/Imported/ParkingLot/textures/lampframe_m_diffuse.jpeg
+    assetPath: Assets/PocketDrive/Imported/ParkingLot/textures/lampframe_m_diffuse.jpeg
+  - type: 1
+    originalUri: Assets/PocketDrive/Imported/ParkingLot/textures/lampframe_m_normal.png
+    assetPath: Assets/PocketDrive/Imported/ParkingLot/textures/lampframe_m_normal.png
+  - type: 1
+    originalUri: Assets/PocketDrive/Imported/ParkingLot/textures/lampgrill_m_diffuse.jpeg
+    assetPath: Assets/PocketDrive/Imported/ParkingLot/textures/lampgrill_m_diffuse.jpeg
+  - type: 1
+    originalUri: Assets/PocketDrive/Imported/ParkingLot/textures/lampgrill_m_normal.png
+    assetPath: Assets/PocketDrive/Imported/ParkingLot/textures/lampgrill_m_normal.png
+  - type: 1
+    originalUri: Assets/PocketDrive/Imported/ParkingLot/textures/fix_m_diffuse.jpeg
+    assetPath: Assets/PocketDrive/Imported/ParkingLot/textures/fix_m_diffuse.jpeg
+  - type: 1
+    originalUri: Assets/PocketDrive/Imported/ParkingLot/textures/lamp3_m_diffuse.jpeg
+    assetPath: Assets/PocketDrive/Imported/ParkingLot/textures/lamp3_m_diffuse.jpeg
+  - type: 1
+    originalUri: Assets/PocketDrive/Imported/ParkingLot/textures/lamp3_m_normal.png
+    assetPath: Assets/PocketDrive/Imported/ParkingLot/textures/lamp3_m_normal.png
+  - type: 1
+    originalUri: Assets/PocketDrive/Imported/ParkingLot/textures/steel_m_diffuse.jpeg
+    assetPath: Assets/PocketDrive/Imported/ParkingLot/textures/steel_m_diffuse.jpeg
+  - type: 1
+    originalUri: Assets/PocketDrive/Imported/ParkingLot/textures/steel_m_normal.png
+    assetPath: Assets/PocketDrive/Imported/ParkingLot/textures/steel_m_normal.png
+  - type: 1
+    originalUri: Assets/PocketDrive/Imported/ParkingLot/textures/plastic_m_diffuse.jpeg
+    assetPath: Assets/PocketDrive/Imported/ParkingLot/textures/plastic_m_diffuse.jpeg
+  - type: 1
+    originalUri: Assets/PocketDrive/Imported/ParkingLot/textures/plastic_m_normal.png
+    assetPath: Assets/PocketDrive/Imported/ParkingLot/textures/plastic_m_normal.png
+  - type: 1
+    originalUri: Assets/PocketDrive/Imported/ParkingLot/textures/whitepaint_m_diffuse.jpeg
+    assetPath: Assets/PocketDrive/Imported/ParkingLot/textures/whitepaint_m_diffuse.jpeg
+  - type: 1
+    originalUri: Assets/PocketDrive/Imported/ParkingLot/textures/whitepaint_m_normal.png
+    assetPath: Assets/PocketDrive/Imported/ParkingLot/textures/whitepaint_m_normal.png
+  - type: 1
+    originalUri: Assets/PocketDrive/Imported/ParkingLot/textures/blackpaint_m_diffuse.jpeg
+    assetPath: Assets/PocketDrive/Imported/ParkingLot/textures/blackpaint_m_diffuse.jpeg
+  - type: 1
+    originalUri: Assets/PocketDrive/Imported/ParkingLot/textures/blackpaint_m_normal.png
+    assetPath: Assets/PocketDrive/Imported/ParkingLot/textures/blackpaint_m_normal.png
+  - type: 1
+    originalUri: Assets/PocketDrive/Imported/ParkingLot/textures/concrete_floor_m_diffuse.jpeg
+    assetPath: Assets/PocketDrive/Imported/ParkingLot/textures/concrete_floor_m_diffuse.jpeg
+  - type: 1
+    originalUri: Assets/PocketDrive/Imported/ParkingLot/textures/concrete_floor_m_normal.png
+    assetPath: Assets/PocketDrive/Imported/ParkingLot/textures/concrete_floor_m_normal.png
+  - type: 1
+    originalUri: Assets/PocketDrive/Imported/ParkingLot/textures/atlas_mat_diffuse.jpeg
+    assetPath: Assets/PocketDrive/Imported/ParkingLot/textures/atlas_mat_diffuse.jpeg
+  - type: 1
+    originalUri: Assets/PocketDrive/Imported/ParkingLot/textures/atlas_mat_normal.png
+    assetPath: Assets/PocketDrive/Imported/ParkingLot/textures/atlas_mat_normal.png
+  - type: 1
+    originalUri: Assets/PocketDrive/Imported/ParkingLot/textures/switches_m_diffuse.jpeg
+    assetPath: Assets/PocketDrive/Imported/ParkingLot/textures/switches_m_diffuse.jpeg
+  - type: 1
+    originalUri: Assets/PocketDrive/Imported/ParkingLot/textures/switches_m_normal.png
+    assetPath: Assets/PocketDrive/Imported/ParkingLot/textures/switches_m_normal.png
+  - type: 1
+    originalUri: Assets/PocketDrive/Imported/ParkingLot/textures/vent_m_diffuse.jpeg
+    assetPath: Assets/PocketDrive/Imported/ParkingLot/textures/vent_m_diffuse.jpeg
+  - type: 1
+    originalUri: Assets/PocketDrive/Imported/ParkingLot/textures/vent_m_normal.png
+    assetPath: Assets/PocketDrive/Imported/ParkingLot/textures/vent_m_normal.png
+  - type: 1
+    originalUri: Assets/PocketDrive/Imported/ParkingLot/textures/pipechair1_m_diffuse.jpeg
+    assetPath: Assets/PocketDrive/Imported/ParkingLot/textures/pipechair1_m_diffuse.jpeg
+  - type: 1
+    originalUri: Assets/PocketDrive/Imported/ParkingLot/textures/pipechair1_m_normal.png
+    assetPath: Assets/PocketDrive/Imported/ParkingLot/textures/pipechair1_m_normal.png
+  - type: 1
+    originalUri: Assets/PocketDrive/Imported/ParkingLot/textures/gate_m_diffuse.jpeg
+    assetPath: Assets/PocketDrive/Imported/ParkingLot/textures/gate_m_diffuse.jpeg
+  - type: 1
+    originalUri: Assets/PocketDrive/Imported/ParkingLot/textures/gate_m_normal.png
+    assetPath: Assets/PocketDrive/Imported/ParkingLot/textures/gate_m_normal.png
+  reportItems:
+  - type: 2
+    code: 20
+    messages:
+    - KHR_materials_emissive_strength
