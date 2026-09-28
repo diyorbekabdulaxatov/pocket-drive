@@ -145,6 +145,16 @@ Exit: someone outside the team understands and enjoys a level without help, at a
 27. Remote announcement cards, daily challenges, cloud save if players ask for it.
 28. Subscription, once the content schedule can support it.
 
+## 7B. Change of approach (28 September 2026)
+
+Agreed with Diyorbek: stop building the map and art from scratch. Use **ready-made free assets** for everything that can be found for free: the city or map, cars, pedestrians, trees and street props.
+
+- **Licences:** non-commercial assets are allowed as **placeholders during development**. Every asset is recorded in `ASSET-LICENSES.md`; non-commercial ones are marked and must be replaced before release.
+- **Downloads that need an account** (Sketchfab, Unity Asset Store, Mixamo) are done by Diyorbek, who puts the files in `Assets/PocketDrive/Imported/<pack name>/`. Claude imports, sets up materials, colliders and scale, and wires them into the game.
+- **The generated Coastal City** stays only until a ready-made city replaces it. Its road problems are fixed only if it is kept.
+- **Code stays:** car handling, traffic, pedestrian logic and the parking challenge are reused on the new map.
+- **Cartoon pedestrians removed.** Pedestrians return when realistic characters are available.
+
 ## 7A. Agreed order of remaining work
 
 Agreed with Diyorbek on 27 September 2026. This list is the working order; section 7 keeps the history of earlier steps.
@@ -153,8 +163,8 @@ Agreed with Diyorbek on 27 September 2026. This list is the working order; secti
 2. **Parking challenge:** park in a marked bay against the clock, with stars. *(Done, first version: random target bay among 106, 60 s limit, stars from time and hits, retry and free-drive buttons. Needs phone playtesting for difficulty.)*
 3. **Time-trial challenge:** checkpoint races on the streets and freeway.
 4. **Car details:** wheels that spin and steer, engine and crash sounds, visible traffic-light colours.
-5. **Realistic buildings and trees:** free Asset Store packs added to Diyorbek's Unity account.
-6. **Realistic people:** Mixamo characters from Diyorbek's Adobe account, replacing the placeholders.
+5. **Ready-made realistic map, cars and trees** (see 7B): Diyorbek downloads the chosen free packs; Claude integrates them and moves traffic and the parking challenge onto the new map.
+6. **Realistic people:** ready-made characters (Mixamo or a free pack). Cartoon placeholders were removed.
 7. **Decisions:** Input System package; stay on Unity 6000.6.3f1 or move to the LTS release.
 8. **Game screens:** menu, level select, garage, results, settings, local saves.
 9. **Coins and garage:** earn coins, unlock 3 to 5 cars; then 20 to 30 levels.
