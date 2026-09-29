@@ -38,7 +38,7 @@ namespace PocketDrive.Editor
             pedestrianSettings.ApplyModifiedPropertiesWithoutUndo();
         }
 
-        static GameObject CarTemplate(Transform parent)
+        internal static GameObject CarTemplate(Transform parent)
         {
             var car = new GameObject("Traffic car template");
             car.transform.SetParent(parent, false);

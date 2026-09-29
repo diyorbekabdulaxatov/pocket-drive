@@ -6,6 +6,9 @@ EditorBuildSettings:
   serializedVersion: 2
   m_Scenes:
   - enabled: 1
+    path: Assets/PocketDrive/Scenes/Downtown.unity
+    guid: 16fd5ba99a46a45cd8ad48b0bd6cfd9f
+  - enabled: 1
     path: Assets/PocketDrive/Scenes/CoastalCity.unity
     guid: 1d99803fa08c64ffbb8c82f80fa7f870
   - enabled: 1

@@ -56,6 +56,9 @@ namespace PocketDrive.Editor
             OuterGround(world);
             Boundaries(world);
             Physics.SyncTransforms();
+            var roads = RoadNetworkBuilder.Build();
+            int cleared = ClearLanes(city, roads);
+            Physics.SyncTransforms();
 
             var car = PlayerCar();
             var camera = Camera(car.transform);
@@ -71,7 +74,15 @@ namespace PocketDrive.Editor
             Vector3 start = Ground(lot.transform.TransformPoint(new Vector3(-24, 0, 0))) + Vector3.up * .45f;
             ChallengeSetup.AddParking(car, camera, bays, start, LotYaw + 90f, new Vector2(2.3f, 4.6f));
 
+            var traffic = new GameObject("Traffic").AddComponent<GraphTrafficSystem>();
+            traffic.player = car.transform;
+            var trafficSettings = new SerializedObject(traffic);
+            trafficSettings.FindProperty("graph").objectReferenceValue = roads;
+            trafficSettings.FindProperty("carTemplate").objectReferenceValue = CityPopulation.CarTemplate(traffic.transform);
+            trafficSettings.ApplyModifiedPropertiesWithoutUndo();
+
             Lighting();
+            Debug.Log($"POCKET_DRIVE_DOWNTOWN_LANES: removed {cleared} parked model cars standing in driving lanes");
             EditorSceneManager.SaveScene(scene, ScenePath);
             var scenes = EditorBuildSettings.scenes.Where(s => s.path != ScenePath).ToList();
             scenes.Insert(0, new EditorBuildSettingsScene(ScenePath, true));
@@ -90,6 +101,30 @@ namespace PocketDrive.Editor
             PrefabUtility.InstantiatePrefab(asset, go.transform);
             foreach (var t in go.GetComponentsInChildren<Transform>()) t.gameObject.isStatic = true;
             return go;
+        }
+
+        // The city model has cars baked into its streets; remove the ones standing where traffic drives.
+        static int ClearLanes(GameObject city, RoadGraph roads)
+        {
+            int removed = 0;
+            foreach (var renderer in city.GetComponentsInChildren<Renderer>())
+            {
+                if (!renderer.sharedMaterials.Any(m => m != null && m.name.ToLowerInvariant().Contains("vehicle"))) continue;
+                Vector3 c = renderer.bounds.center;
+                float nearest = roads.edges.Min(e => DistanceToSegment(c, roads.nodes[e.x], roads.nodes[e.y]));
+                if (nearest > roads.laneOffset + 2.5f) continue;
+                Object.DestroyImmediate(renderer.gameObject);
+                removed++;
+            }
+            return removed;
+        }
+
+        public static float DistanceToSegment(Vector3 p, Vector3 a, Vector3 b)
+        {
+            Vector2 P = new(p.x, p.z), A = new(a.x, a.z), B = new(b.x, b.z);
+            Vector2 ab = B - A;
+            float t = ab.sqrMagnitude < 1e-4f ? 0 : Mathf.Clamp01(Vector2.Dot(P - A, ab) / ab.sqrMagnitude);
+            return Vector2.Distance(P, A + ab * t);
         }
 
         static void AddColliders(GameObject root, Func<string, bool> skip = null)
@@ -269,8 +304,54 @@ namespace PocketDrive.Editor
                 car.ResetCar();
             }
             finally { Physics.simulationMode = previousMode; }
+            TrafficChecks();
             ChallengeSetup.RunChecks(ScenePath);
             Debug.Log("POCKET_DRIVE_DOWNTOWN_CHECKS_OK: spawn grounded, drives, parking challenge passes");
+        }
+
+        // Traffic drives the street network for 60 simulated seconds without leaving the roads or overlapping.
+        static void TrafficChecks()
+        {
+            EditorSceneManager.OpenScene(ScenePath);
+            var traffic = Object.FindAnyObjectByType<GraphTrafficSystem>(FindObjectsInactive.Include);
+            Require(traffic != null, "Downtown has no traffic");
+            // Park the player in the car park, out of the traffic's way, so a stopped player doesn't hold up the test.
+            traffic.player.position = LotPosition + Vector3.up * .3f;
+            Physics.SyncTransforms();
+            const BindingFlags flags = BindingFlags.Instance | BindingFlags.NonPublic;
+            typeof(GraphTrafficSystem).GetMethod("Start", flags).Invoke(traffic, null);
+            Require(traffic.enabled && traffic.ActiveCars > 0, "Traffic did not start");
+            var tick = typeof(GraphTrafficSystem).GetMethod("FixedUpdate", flags);
+            var roads = traffic.Graph;
+            var cars = traffic.GetComponentsInChildren<Rigidbody>().Where(b => b.gameObject.activeInHierarchy).ToArray();
+            var travelled = new float[cars.Length];
+            var previousMode = Physics.simulationMode;
+            try
+            {
+                Physics.simulationMode = SimulationMode.Script;
+                for (int step = 0; step < 3000; step++)
+                {
+                    var before = cars.Select(c => c.position).ToArray();
+                    tick.Invoke(traffic, null);
+                    Physics.Simulate(.02f);
+                    for (int i = 0; i < cars.Length; i++)
+                    {
+                        Vector3 p = cars[i].position;
+                        float moved = Vector3.Distance(before[i], p);
+                        if (moved < 5f) travelled[i] += moved;
+                        float off = roads.edges.Min(e => DistanceToSegment(p, roads.nodes[e.x], roads.nodes[e.y]));
+                        Require(off < roads.laneOffset + 6f, $"{cars[i].name} left the roads at {p} ({off:0.0} m from a road)");
+                        for (int j = i + 1; j < cars.Length; j++)
+                            Require(Vector3.Distance(p, cars[j].position) > 3f, $"{cars[i].name} overlaps {cars[j].name} at {p}");
+                    }
+                }
+            }
+            finally { Physics.simulationMode = previousMode; }
+            for (int i = 0; i < cars.Length; i++)
+                if (travelled[i] <= 120f) Debug.Log($"POCKET_DRIVE_STUCK {cars[i].name} at {cars[i].position} travelled {travelled[i]:0}");
+            int moving = travelled.Count(d => d > 120f);
+            Require(moving >= cars.Length * 3 / 4, $"Only {moving} of {cars.Length} cars kept moving");
+            Debug.Log($"POCKET_DRIVE_DOWNTOWN_TRAFFIC_OK: {cars.Length} cars, {moving} drove over 120 m in 60 s");
         }
 
         // Street and car park renders for review.
@@ -291,6 +372,21 @@ namespace PocketDrive.Editor
             Vector3 back = -car.transform.forward;
             CityPopulation.Capture(cam, car.transform.position + back * 7 + Vector3.up * 4, car.transform.position - back * 14,
                 "outputs/downtown-parking.png");
+            var traffic = Object.FindAnyObjectByType<GraphTrafficSystem>(FindObjectsInactive.Include);
+            if (traffic != null)
+            {
+                var flags = BindingFlags.Instance | BindingFlags.NonPublic;
+                car.PlaceAt(p, Quaternion.identity);
+                typeof(GraphTrafficSystem).GetMethod("Start", flags).Invoke(traffic, null);
+                var previousMode = Physics.simulationMode;
+                Physics.simulationMode = SimulationMode.Script;
+                for (int i = 0; i < 600; i++) { typeof(GraphTrafficSystem).GetMethod("FixedUpdate", flags).Invoke(traffic, null); Physics.Simulate(.02f); }
+                Physics.simulationMode = previousMode;
+                var nearest = traffic.GetComponentsInChildren<Rigidbody>().Where(b => b.gameObject.activeInHierarchy)
+                    .OrderBy(b => Vector3.Distance(b.position, p)).First().transform;
+                CityPopulation.Capture(cam, nearest.position - nearest.forward * 9 + Vector3.up * 3.5f + nearest.right * 3,
+                    nearest.position + nearest.forward * 10, "outputs/downtown-traffic.png");
+            }
             Debug.Log("POCKET_DRIVE_DOWNTOWN_PREVIEW_OK");
         }
 
